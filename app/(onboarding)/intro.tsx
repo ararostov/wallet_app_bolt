@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1 },
   skipBtn: { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: 8 },
-  skipText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  skipText: { fontSize: 17, fontFamily: 'Inter-Medium' },
   slide: { flex: 1, alignItems: 'center', paddingHorizontal: 32 },
   illustrationBox: {
     width: '100%',
@@ -160,14 +160,14 @@ const styles = StyleSheet.create({
   },
   textBox: { marginTop: 32, alignItems: 'center', gap: 12 },
   headline: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: 'Inter-Bold',
     textAlign: 'center',
     lineHeight: 34,
     letterSpacing: -0.5,
   },
   body: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 24,
@@ -180,11 +180,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   secondaryBtn: {
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  secondaryBtnText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  secondaryBtnText: { fontSize: 17, fontFamily: 'Inter-Medium' },
 });

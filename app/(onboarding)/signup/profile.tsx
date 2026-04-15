@@ -28,7 +28,7 @@ function Stepper({ current, total }: { current: number; total: number }) {
 const stepStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 28 },
   step: { flex: 1, height: 4, borderRadius: 2 },
-  label: { fontSize: 12, fontFamily: 'Inter-Regular', marginLeft: 4 },
+  label: { fontSize: 15, fontFamily: 'Inter-Regular', marginLeft: 4 },
 });
 
 function formatDob(raw: string): string {
@@ -148,25 +148,25 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, padding: 24, paddingBottom: 40 },
   backBtn: { marginBottom: 16 },
-  backText: { fontSize: 16, fontFamily: 'Inter-Medium' },
-  title: { fontSize: 26, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
+  backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
+  title: { fontSize: 28, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
+  subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
   field: { marginBottom: 16 },
-  label: { fontSize: 14, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
+  label: { fontSize: 16, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
   input: {
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: 'Inter-Regular',
   },
-  errorText: { fontSize: 12, marginTop: 4, fontFamily: 'Inter-Regular' },
+  errorText: { fontSize: 15, marginTop: 4, fontFamily: 'Inter-Regular' },
   primaryBtn: {
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 8,
   },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
 });

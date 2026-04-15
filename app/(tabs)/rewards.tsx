@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { X, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 import { formatCurrency, formatDateShort } from '@/utils/format';
@@ -69,13 +69,16 @@ export default function RewardsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <ArrowLeft size={22} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: colors.text }]}>Rewards</Text>
+        <TouchableOpacity onPress={() => router.push('/tier')}>
+          <Text style={[styles.tierLink, { color: colors.primary }]}>Tier</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Rewards</Text>
-          <TouchableOpacity onPress={() => router.push('/tier')}>
-            <Text style={[styles.tierLink, { color: colors.primary }]}>Tier</Text>
-          </TouchableOpacity>
-        </View>
 
         <View style={[styles.hero, { backgroundColor: colors.surface }]}>
           <View style={styles.heroStatRow}>
@@ -187,9 +190,10 @@ export default function RewardsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingBottom: 40 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  title: { fontSize: 22, fontFamily: 'Inter-Bold' },
-  tierLink: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
+  backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 24, fontFamily: 'Inter-Bold' },
+  tierLink: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   hero: {
     marginHorizontal: 16,
     borderRadius: 20,
@@ -206,12 +210,12 @@ const styles = StyleSheet.create({
   heroStatRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
   heroStat: { flex: 1, alignItems: 'center', gap: 4 },
   heroStatDivider: { width: 1, height: 44 },
-  heroStatAmount: { fontSize: 30, fontFamily: 'Inter-Bold', letterSpacing: -1 },
-  heroStatLabel: { fontSize: 12, fontFamily: 'Inter-Regular' },
+  heroStatAmount: { fontSize: 32, fontFamily: 'Inter-Bold', letterSpacing: -1 },
+  heroStatLabel: { fontSize: 15, fontFamily: 'Inter-Regular' },
   tabs: { marginBottom: 4 },
   tabsContent: { paddingHorizontal: 16, gap: 8 },
   tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  tabText: { fontSize: 13, fontFamily: 'Inter-Medium' },
+  tabText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   tabTextActive: { color: '#fff' },
   list: { paddingHorizontal: 16, marginTop: 8 },
   rewardRow: {
@@ -223,12 +227,12 @@ const styles = StyleSheet.create({
   },
   rewardDot: { width: 10, height: 10, borderRadius: 5, marginTop: 2 },
   rewardInfo: { flex: 1 },
-  rewardSource: { fontSize: 14, fontFamily: 'Inter-SemiBold', lineHeight: 20 },
-  rewardMeta: { fontSize: 12, fontFamily: 'Inter-Regular', marginTop: 2 },
+  rewardSource: { fontSize: 16, fontFamily: 'Inter-SemiBold', lineHeight: 20 },
+  rewardMeta: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },
   rewardRight: { alignItems: 'flex-end', gap: 4 },
-  rewardAmount: { fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#059669' },
+  rewardAmount: { fontSize: 17, fontFamily: 'Inter-SemiBold', color: '#059669' },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-  statusTextLabel: { fontSize: 11, fontFamily: 'Inter-SemiBold' },
+  statusTextLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
   emptyText: { textAlign: 'center', fontFamily: 'Inter-Regular', paddingVertical: 24 },
   expandSection: {
     flexDirection: 'row',
@@ -239,21 +243,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderTopWidth: 1,
   },
-  expandTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  expandTitle: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
   expandContent: { paddingHorizontal: 16, gap: 12, paddingBottom: 8 },
   expandItem: { gap: 2 },
-  expandItemTitle: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
-  expandItemDesc: { fontSize: 13, fontFamily: 'Inter-Regular', lineHeight: 18 },
+  expandItemTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  expandItemDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
   modalSafe: { flex: 1 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 17, fontFamily: 'Inter-Bold' },
+  modalTitle: { fontSize: 19, fontFamily: 'Inter-Bold' },
   modalContent: { padding: 20, gap: 16 },
   modalAmountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  modalAmount: { fontSize: 32, fontFamily: 'Inter-Bold', color: '#059669' },
+  modalAmount: { fontSize: 35, fontFamily: 'Inter-Bold', color: '#059669' },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1 },
-  infoLabel: { fontSize: 14, fontFamily: 'Inter-Regular' },
-  infoValue: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
+  infoLabel: { fontSize: 16, fontFamily: 'Inter-Regular' },
+  infoValue: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   linkedTx: { paddingVertical: 12 },
-  linkedTxText: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
-  modalNote: { fontSize: 12, fontFamily: 'Inter-Regular', lineHeight: 18, padding: 12, borderRadius: 8 },
+  linkedTxText: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  modalNote: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18, padding: 12, borderRadius: 8 },
 });

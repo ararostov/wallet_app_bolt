@@ -127,59 +127,58 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <View style={styles.blocksGrid}>
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/referral')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
-              <Users size={20} color={colors.primary} />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>Invite Friends</Text>
-            <Text style={[styles.blockSub, { color: colors.textSecondary }]}>Get £5</Text>
-          </TouchableOpacity>
+          <View style={styles.blocksRow}>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/referral')}>
+              <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
+                <Users size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>Invite Friends</Text>
+              <Text style={[styles.blockSub, { color: colors.primary }]}>Get £5</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/auto-reload')}>
+              <View style={[styles.blockIcon, { backgroundColor: state.autoReload.enabled ? (isDark ? '#064E3B' : '#f0fdf4') : (isDark ? '#7F1D1D' : '#fef2f2') }]}>
+                <Zap size={20} color={state.autoReload.enabled ? colors.green : colors.red} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>Auto Reload</Text>
+              <Text style={[styles.blockSub, { color: state.autoReload.enabled ? colors.green : colors.red, fontFamily: 'Inter-SemiBold' }]}>
+                {state.autoReload.enabled ? 'ON' : 'OFF'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/auto-reload')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#78350F' : '#fef3c7' }]}>
-              <Zap size={20} color={colors.amber} />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>Auto Reload</Text>
-            <Text style={[styles.blockSub, state.autoReload.enabled && { color: colors.green, fontFamily: 'Inter-SemiBold' }, !state.autoReload.enabled && { color: colors.textSecondary }]}>
-              {state.autoReload.enabled ? 'ON' : 'OFF'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.blocksRow}>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/(tabs)/rewards')}>
+              <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
+                <Gift size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>Rewards</Text>
+              <Text style={[styles.blockSub, { color: colors.primary }]}>{formatCurrency(availableRewardsTotal)} earned</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/tier')}>
+              <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
+                <Star size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>{tier.current}</Text>
+              <Text style={[styles.blockSub, { color: colors.primary }]}>{formatCurrency(tier.targetGBP - tier.progressGBP)} to next</Text>
+            </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/(tabs)/rewards')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#064E3B' : '#f0fdf4' }]}>
-              <Gift size={20} color={colors.green} />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>Rewards</Text>
-            <Text style={[styles.blockSub, { color: colors.green, fontFamily: 'Inter-SemiBold' }]}>
-              {formatCurrency(availableRewardsTotal)} earned
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/tier')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#78350F' : '#fefce8' }]}>
-              <Star size={20} color="#ca8a04" />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>{tier.current}</Text>
-            <Text style={[styles.blockSub, { color: colors.textSecondary }]}>
-              {formatCurrency(tier.targetGBP - tier.progressGBP)} to next
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/program')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#78350F' : '#fef3c7' }]}>
-              <Star size={20} color={colors.amber} />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>Perks & Offers</Text>
-            <Text style={[styles.blockSub, { color: colors.textSecondary }]}>See all</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/transactions')}>
-            <View style={[styles.blockIcon, { backgroundColor: isDark ? '#334155' : '#f1f5f9' }]}>
-              <ShoppingBag size={20} color={colors.textSecondary} />
-            </View>
-            <Text style={[styles.blockTitle, { color: colors.text }]}>Transactions</Text>
-            <Text style={[styles.blockSub, { color: colors.textSecondary }]}>History</Text>
-          </TouchableOpacity>
+          <View style={styles.blocksRow}>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/program')}>
+              <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
+                <Star size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>Perks & Offers</Text>
+              <Text style={[styles.blockSub, { color: colors.primary }]}>See all</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.blockCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/transactions')}>
+              <View style={[styles.blockIcon, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
+                <ShoppingBag size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.blockTitle, { color: colors.text }]}>Transactions</Text>
+              <Text style={[styles.blockSub, { color: colors.primary }]}>History</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -275,7 +274,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 4,
   },
-  walletTitle: { fontSize: 18, fontFamily: 'Inter-Bold' },
+  walletTitle: { fontSize: 20, fontFamily: 'Inter-Bold' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   notifDot: {
@@ -285,32 +284,41 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, borderColor: '#f8fafc',
   },
-  notifDotText: { fontSize: 10, fontFamily: 'Inter-Bold', color: '#fff' },
+  notifDotText: { fontSize: 15, fontFamily: 'Inter-Bold', color: '#fff' },
   avatarBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: '#1a56db',
     alignItems: 'center', justifyContent: 'center',
   },
-  greeting: { fontSize: 20, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, marginTop: 8, marginBottom: 14 },
+  greeting: { fontSize: 22, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, marginTop: 8, marginBottom: 14 },
   cardWidget: {
     marginHorizontal: 16,
     borderRadius: 20,
     padding: 22,
     height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardWidgetTop: {
+    position: 'absolute',
+    top: 22,
+    left: 22,
+    right: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
-  cardWidgetTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardWidgetLabel: { fontSize: 14, fontFamily: 'Inter-Bold', color: '#fff', letterSpacing: 0.5 },
+  cardWidgetLabel: { fontSize: 16, fontFamily: 'Inter-Bold', color: '#fff', letterSpacing: 0.5 },
   cardStatusChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   chipActive: { backgroundColor: 'rgba(255,255,255,0.18)' },
   chipFrozen: { backgroundColor: 'rgba(255,255,255,0.18)' },
   chipDot: { width: 6, height: 6, borderRadius: 3 },
   dotGreen: { backgroundColor: '#4ade80' },
   dotAmber: { backgroundColor: '#fbbf24' },
-  chipText: { fontSize: 12, fontFamily: 'Inter-Medium', color: '#fff' },
-  cardBalanceArea: { alignItems: 'center', paddingBottom: 8 },
-  cardBalance: { fontSize: 42, fontFamily: 'Inter-Bold', color: '#fff', letterSpacing: -2 },
-  cardCashback: { fontSize: 13, fontFamily: 'Inter-Regular', color: 'rgba(255,255,255,0.7)', marginTop: 4 },
+  chipText: { fontSize: 15, fontFamily: 'Inter-Medium', color: '#fff' },
+  cardBalanceArea: { alignItems: 'center', marginTop: 18 },
+  cardBalance: { fontSize: 57, fontFamily: 'Inter-Bold', color: '#fff', letterSpacing: -2 },
+  cardCashback: { fontSize: 15, fontFamily: 'Inter-Regular', color: 'rgba(255,255,255,0.7)', marginTop: 4 },
   cardCashbackWarning: { color: '#fbbf24', fontFamily: 'Inter-Medium' },
   addFundsBtn: {
     flexDirection: 'row',
@@ -323,10 +331,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 20,
   },
-  addFundsBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
-  blocksGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 12, marginBottom: 20 },
+  addFundsBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  blocksGrid: { marginHorizontal: 16, gap: 12, marginBottom: 20 },
+  blocksRow: { flexDirection: 'row', gap: 12 },
   blockCard: {
-    width: '47%',
+    flex: 1,
     borderRadius: 16,
     padding: 16,
     gap: 6,
@@ -337,12 +346,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   blockIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  blockTitle: { fontSize: 14, fontFamily: 'Inter-SemiBold', marginTop: 4 },
-  blockSub: { fontSize: 12, fontFamily: 'Inter-Regular' },
-  section: { paddingHorizontal: 16, marginBottom: 20 },
+  blockTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold', marginTop: 4 },
+  blockSub: { fontSize: 15, fontFamily: 'Inter-Regular' },
+  section: { marginHorizontal: 16, marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontFamily: 'Inter-Bold' },
-  seeAll: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
+  sectionTitle: { fontSize: 19, fontFamily: 'Inter-Bold' },
+  seeAll: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   txRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -352,10 +361,10 @@ const styles = StyleSheet.create({
   },
   txIcon: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   txInfo: { flex: 1 },
-  txMerchant: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  txDate: { fontSize: 12, fontFamily: 'Inter-Regular', marginTop: 2 },
-  txAmount: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  emptyText: { fontSize: 14, fontFamily: 'Inter-Regular', textAlign: 'center', paddingVertical: 20 },
+  txMerchant: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  txDate: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },
+  txAmount: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  emptyText: { fontSize: 16, fontFamily: 'Inter-Regular', textAlign: 'center', paddingVertical: 20 },
   promoBanner: {
     marginHorizontal: 16,
     borderRadius: 14,
@@ -367,8 +376,8 @@ const styles = StyleSheet.create({
   },
   promoBannerContent: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   promoBannerText: { flex: 1 },
-  promoBannerTitle: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
-  promoBannerSub: { fontSize: 12, fontFamily: 'Inter-Regular', marginTop: 2 },
+  promoBannerTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  promoBannerSub: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },
   promoBannerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  promoBannerCTA: { fontSize: 13, fontFamily: 'Inter-SemiBold' },
+  promoBannerCTA: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
 });

@@ -265,7 +265,7 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
       };
 
     case 'DELETE_CARD':
-      return { ...state, card: { ...state.card, status: 'closed' } };
+      return { ...state, card: { ...state.card, status: 'not_issued' } };
 
     case 'LOGOUT':
       return { ...defaultState, initialized: true };

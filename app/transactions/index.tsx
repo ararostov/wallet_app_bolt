@@ -76,7 +76,7 @@ export default function TransactionsScreen() {
         {FILTERS.map((f) => (
           <TouchableOpacity
             key={f}
-            style={[styles.filterChip, { backgroundColor: colors.surfaceAlt }, filter === f && { backgroundColor: colors.primary }]}
+            style={[styles.filterChip, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }, filter === f && { backgroundColor: colors.primary, borderColor: colors.primary }]}
             onPress={() => setFilter(f)}
           >
             <Text style={[styles.filterText, { color: colors.textSecondary }, filter === f && styles.filterTextActive]}>{f}</Text>
@@ -139,22 +139,22 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   filtersScroll: { borderBottomWidth: 1 },
   filtersContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  filterText: { fontSize: 13, fontFamily: 'Inter-Medium' },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, height: 36, justifyContent: 'center' },
+  filterText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   filterTextActive: { color: '#fff' },
   scroll: { paddingBottom: 32 },
-  dateHeader: { fontSize: 12, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.3 },
+  dateHeader: { fontSize: 15, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.3 },
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, gap: 12, borderBottomWidth: 1 },
   txIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   txInfo: { flex: 1, gap: 4 },
-  txMerchant: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  txMerchant: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
   txMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  txMethod: { fontSize: 12, fontFamily: 'Inter-Regular' },
+  txMethod: { fontSize: 15, fontFamily: 'Inter-Regular' },
   statusChip: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-  statusChipText: { fontSize: 11, fontFamily: 'Inter-SemiBold' },
-  txAmount: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  statusChipText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  txAmount: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
   emptyText: { textAlign: 'center', fontFamily: 'Inter-Regular', paddingVertical: 40 },
 });

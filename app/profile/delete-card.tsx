@@ -14,7 +14,7 @@ export default function DeleteCardScreen() {
   const [showPass, setShowPass] = useState(false);
 
   const handleDelete = () => {
-    if (password !== 'password123') {
+    if (password !== '1234') {
       Alert.alert('Wrong password', 'Please enter your correct password to confirm.');
       return;
     }
@@ -92,23 +92,23 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   scroll: { padding: 16, paddingBottom: 40, alignItems: 'center' },
   warningIcon: { width: 88, height: 88, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  warningTitle: { fontSize: 22, fontFamily: 'Inter-Bold', marginBottom: 20 },
+  warningTitle: { fontSize: 24, fontFamily: 'Inter-Bold', marginBottom: 20 },
   consequenceCard: { borderRadius: 14, padding: 16, width: '100%', marginBottom: 24, gap: 10 },
-  consequenceTitle: { fontSize: 14, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
+  consequenceTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
   consequenceRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   bullet: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
-  consequenceText: { fontSize: 14, fontFamily: 'Inter-Regular', flex: 1, lineHeight: 20 },
+  consequenceText: { fontSize: 16, fontFamily: 'Inter-Regular', flex: 1, lineHeight: 20 },
   field: { width: '100%', marginBottom: 16 },
-  label: { fontSize: 13, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
+  label: { fontSize: 15, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
   inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 12 },
-  input: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontFamily: 'Inter-Regular' },
+  input: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 17, fontFamily: 'Inter-Regular' },
   eyeBtn: { paddingRight: 14 },
   deleteBtn: { width: '100%', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 10 },
   deleteBtnDisabled: { opacity: 0.5 },
-  deleteBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  deleteBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   cancelBtn: { paddingVertical: 12 },
-  cancelBtnText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  cancelBtnText: { fontSize: 17, fontFamily: 'Inter-Medium' },
 });

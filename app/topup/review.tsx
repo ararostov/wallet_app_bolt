@@ -4,8 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { X } from 'lucide-react-native';
+import { X, ArrowRight } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 import { formatCurrency } from '@/utils/format';
@@ -22,6 +21,9 @@ export default function TopupReviewScreen() {
   const isBonusPending = state.wallet.bonusState === 'pending' || state.wallet.bonusState === 'progress';
   const willUnlockBonus = isBonusPending && amount >= state.wallet.topUpTarget;
   const bonusAmount = willUnlockBonus ? state.wallet.bonusAmount : 0;
+  const CASHBACK_RATE = 0.05;
+  const cashbackEarned = parseFloat((amount * CASHBACK_RATE).toFixed(2));
+  const youGet = amount + cashbackEarned;
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -42,16 +44,18 @@ export default function TopupReviewScreen() {
       </View>
 
       <View style={styles.container}>
-        <LinearGradient colors={['#1e3a8a', '#7c3aed']} style={styles.cardPreview}>
-          <Text style={styles.cardBrand}>TESCO Wallet</Text>
-          <Text style={styles.cardTopUpLabel}>Adding to your wallet</Text>
-          <Text style={styles.cardAmount}>{formatCurrency(amount)}</Text>
-          {willUnlockBonus && (
-            <View style={styles.bonusRow}>
-              <Text style={styles.bonusRowText}>+ {formatCurrency(bonusAmount)} bonus included</Text>
-            </View>
-          )}
-        </LinearGradient>
+        <View style={[styles.payGetCard, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
+          <View style={styles.payGetSide}>
+            <Text style={[styles.payGetLabel, { color: colors.textSecondary }]}>You Pay</Text>
+            <Text style={[styles.payGetAmount, { color: colors.text }]}>{formatCurrency(amount)}</Text>
+          </View>
+          <ArrowRight size={22} color={colors.textTertiary} style={styles.payGetArrow} />
+          <View style={styles.payGetSide}>
+            <Text style={[styles.payGetLabel, { color: colors.textSecondary }]}>You Get</Text>
+            <Text style={[styles.payGetAmount, { color: colors.text }]}>{formatCurrency(youGet)}</Text>
+            <Text style={styles.payGetCashback}>+{formatCurrency(cashbackEarned)} cashback</Text>
+          </View>
+        </View>
 
         <View style={[styles.summaryCard, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
           {[
@@ -99,23 +103,23 @@ export default function TopupReviewScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1 },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   container: { flex: 1, padding: 16, gap: 16 },
-  cardPreview: { borderRadius: 20, padding: 28, gap: 8, alignItems: 'center' },
-  cardBrand: { fontSize: 14, fontFamily: 'Inter-Bold', color: 'rgba(255,255,255,0.8)', letterSpacing: 2 },
-  cardTopUpLabel: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'Inter-Regular' },
-  cardAmount: { fontSize: 48, fontFamily: 'Inter-Bold', color: '#fff', letterSpacing: -1.5 },
-  bonusRow: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  bonusRowText: { fontSize: 13, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  payGetCard: { borderRadius: 20, padding: 24, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  payGetSide: { flex: 1, alignItems: 'center', gap: 4 },
+  payGetLabel: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  payGetAmount: { fontSize: 30, fontFamily: 'Inter-Bold', letterSpacing: -1 },
+  payGetCashback: { fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#059669' },
+  payGetArrow: { marginTop: 20 },
   summaryCard: { borderRadius: 16, overflow: 'hidden', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1 },
-  summaryLabel: { fontSize: 14, fontFamily: 'Inter-Regular' },
-  summaryValue: { fontSize: 14, fontFamily: 'Inter-Medium' },
+  summaryLabel: { fontSize: 16, fontFamily: 'Inter-Regular' },
+  summaryValue: { fontSize: 16, fontFamily: 'Inter-Medium' },
   summaryValueGreen: { color: '#059669', fontFamily: 'Inter-SemiBold' },
   upsellBanner: { backgroundColor: '#fffbeb', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#fde68a' },
-  upsellText: { fontSize: 14, fontFamily: 'Inter-Medium', color: '#92400e', lineHeight: 20 },
+  upsellText: { fontSize: 16, fontFamily: 'Inter-Medium', color: '#92400e', lineHeight: 20 },
   footer: { padding: 16, borderTopWidth: 1 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   primaryBtnDisabled: { opacity: 0.7 },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
 });
