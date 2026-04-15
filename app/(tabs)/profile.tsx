@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Globe, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon } from 'lucide-react-native';
+import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -64,12 +64,6 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
       { icon: Star, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Tier', route: '/tier' },
       { icon: Sparkles, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Perks & offers', route: '/program' },
       { icon: Users, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Invite friends', route: '/referral' },
-    ],
-  },
-  {
-    title: 'Preferences',
-    items: [
-      { icon: Globe, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Language', route: '/notifications' },
     ],
   },
   {
@@ -146,29 +140,30 @@ export default function ProfileScreen() {
                       <ChevronRight size={16} color={colors.textTertiary} />
                     </TouchableOpacity>
                     {idx < group.items.length - 1 && <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />}
-                    {group.title === 'Preferences' && idx === group.items.length - 1 && (
-                      <>
-                        <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-                        <View style={styles.row}>
-                          <View style={[styles.rowIcon, { backgroundColor: isDark ? '#334155' : '#0f172a' }]}>
-                            <Moon size={18} color="#fff" />
-                          </View>
-                          <Text style={[styles.rowLabel, { color: colors.text }]}>Dark mode</Text>
-                          <Switch
-                            value={isDark}
-                            onValueChange={toggleTheme}
-                            trackColor={{ false: '#e2e8f0', true: colors.primary }}
-                            thumbColor="#fff"
-                          />
-                        </View>
-                      </>
-                    )}
                   </React.Fragment>
                 );
               })}
             </View>
           </View>
         ))}
+
+        <View style={styles.group}>
+          <Text style={[styles.groupTitle, { color: colors.textTertiary }]}>Preferences</Text>
+          <View style={[styles.groupCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.row}>
+              <View style={[styles.rowIcon, { backgroundColor: isDark ? '#334155' : '#0f172a' }]}>
+                <Moon size={18} color="#fff" />
+              </View>
+              <Text style={[styles.rowLabel, { color: colors.text }]}>Dark mode</Text>
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: '#e2e8f0', true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+          </View>
+        </View>
 
         <Text style={[styles.version, { color: colors.textTertiary }]}>Tesco Wallet v1.0.0</Text>
         <TouchableOpacity style={styles.logoutBtn} onPress={() => { logout(); router.replace('/(onboarding)/intro'); }}>
