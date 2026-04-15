@@ -79,9 +79,9 @@ export default function ProfileScreen() {
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>We need a few details to set up your account securely.</Text>
 
           {([
-            { label: 'First name', key: 'firstName', value: firstName, set: setFirstName, placeholder: 'Alex' },
-            { label: 'Last name', key: 'lastName', value: lastName, set: setLastName, placeholder: 'Johnson' },
-          ] as const).map(({ label, key, value, set, placeholder }) => (
+            { label: 'First name', key: 'firstName', value: firstName, set: setFirstName, placeholder: 'Alex', textContentType: 'givenName' as const, autoComplete: 'given-name' as const },
+            { label: 'Last name', key: 'lastName', value: lastName, set: setLastName, placeholder: 'Johnson', textContentType: 'familyName' as const, autoComplete: 'family-name' as const },
+          ] as const).map(({ label, key, value, set, placeholder, textContentType, autoComplete }) => (
             <View key={key} style={styles.field}>
               <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
               <TextInput
@@ -91,6 +91,8 @@ export default function ProfileScreen() {
                 value={value}
                 onChangeText={set}
                 autoCapitalize="words"
+                textContentType={textContentType}
+                autoComplete={autoComplete}
               />
               {errors[key] && <Text style={[styles.errorText, { color: colors.red }]}>{errors[key]}</Text>}
             </View>
@@ -125,6 +127,8 @@ export default function ProfileScreen() {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
               autoCapitalize="none"
             />
             {errors.email && <Text style={[styles.errorText, { color: colors.red }]}>{errors.email}</Text>}

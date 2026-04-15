@@ -54,7 +54,9 @@ export default function IntroScreen() {
 
   const goNext = () => {
     if (activeIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+      const nextIndex = activeIndex + 1;
+      setActiveIndex(nextIndex);
+      flatListRef.current?.scrollToOffset({ offset: nextIndex * width, animated: true });
     } else {
       goToSignup();
     }
@@ -105,16 +107,15 @@ export default function IntroScreen() {
           }}
         />
 
-        <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, { backgroundColor: colors.border }, i === activeIndex && { backgroundColor: colors.primary, width: 24 }]}
-            />
-          ))}
-        </View>
-
         <View style={styles.footer}>
+          <View style={styles.dots}>
+            {SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[styles.dot, { backgroundColor: colors.border }, i === activeIndex && { backgroundColor: colors.primary, width: 24 }]}
+              />
+            ))}
+          </View>
           <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={activeIndex === SLIDES.length - 1 ? goToSignup : goNext}>
             <Text style={styles.primaryBtnText}>{activeIndex === SLIDES.length - 1 ? 'Get started' : 'Next'}</Text>
           </TouchableOpacity>
@@ -124,6 +125,7 @@ export default function IntroScreen() {
         </View>
       </View>
     </SafeAreaView>
+
   );
 }
 
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 24 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   footer: { paddingHorizontal: 24, paddingBottom: 32, gap: 12, marginTop: 'auto' },
   primaryBtn: {

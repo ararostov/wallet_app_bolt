@@ -4,10 +4,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ShoppingBag, Coins, CircleArrowUp as ArrowUpCircle, Tag, RotateCcw } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
-import { formatCurrency, groupTransactionsByDate, getTransactionIcon, getTxColor, getStatusColor, getStatusLabel } from '@/utils/format';
+import { formatCurrency, groupTransactionsByDate, getTxColor, getStatusColor, getStatusLabel } from '@/utils/format';
 
 const FILTERS = ['All', 'Top-ups', 'Purchases', 'Cashback', 'Refunds'] as const;
 type Filter = typeof FILTERS[number];
@@ -19,6 +19,36 @@ const FILTER_MAP: Record<Filter, string | null> = {
   Cashback: 'cashback',
   Refunds: 'refund',
 };
+
+function getTxIcon(type: string) {
+  switch (type) {
+    case 'purchase': return ShoppingBag;
+    case 'cashback': return Coins;
+    case 'topup': return ArrowUpCircle;
+    case 'refund': return RotateCcw;
+    default: return Tag;
+  }
+}
+
+function getTxIconBg(type: string, isDark: boolean) {
+  switch (type) {
+    case 'purchase': return isDark ? '#334155' : '#f1f5f9';
+    case 'cashback': return isDark ? '#064E3B' : '#f0fdf4';
+    case 'topup': return isDark ? '#1E3A5F' : '#eff6ff';
+    case 'refund': return isDark ? '#3B0764' : '#f5f3ff';
+    default: return isDark ? '#334155' : '#f1f5f9';
+  }
+}
+
+function getTxIconColor(type: string, primaryColor: string) {
+  switch (type) {
+    case 'purchase': return '#64748b';
+    case 'cashback': return '#059669';
+    case 'topup': return primaryColor;
+    case 'refund': return '#7c3aed';
+    default: return '#64748b';
+  }
+}
 
 export default function TransactionsScreen() {
   const router = useRouter();
@@ -73,8 +103,8 @@ export default function TransactionsScreen() {
                     style={[styles.txRow, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}
                     onPress={() => router.push(`/transactions/${tx.id}` as any)}
                   >
-                    <View style={[styles.txIcon, { backgroundColor: getTxColor(tx.type) + '20' }]}>
-                      <Text style={styles.txIconText}>{getTransactionIcon(tx.type)}</Text>
+                    <View style={[styles.txIcon, { backgroundColor: getTxIconBg(tx.type, isDark) }]}>
+                      {React.createElement(getTxIcon(tx.type), { size: 20, color: getTxIconColor(tx.type, colors.primary) })}
                     </View>
                     <View style={styles.txInfo}>
                       <Text style={[styles.txMerchant, { color: colors.text }]}>{tx.merchant ?? tx.type}</Text>
@@ -119,7 +149,6 @@ const styles = StyleSheet.create({
   dateHeader: { fontSize: 12, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.3 },
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, gap: 12, borderBottomWidth: 1 },
   txIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  txIconText: { fontSize: 20 },
   txInfo: { flex: 1, gap: 4 },
   txMerchant: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
   txMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

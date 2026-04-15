@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Copy, TriangleAlert as AlertTriangle } from 'lucide-react-native';
@@ -71,7 +71,7 @@ export default function TransactionDetailScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
           {[
             { label: 'Date & time', value: formatDateLong(tx.date) },
-            { label: 'Method', value: tx.method },
+            { label: 'Method', value: tx.method === 'digital_wallet' ? (Platform.OS === 'android' ? 'Google Wallet' : 'Apple Wallet') : tx.method },
             { label: 'Category', value: tx.category ?? '\u2014' },
           ].map(({ label, value }) => (
             <View key={label} style={[styles.infoRow, { borderBottomColor: colors.borderLight }]}>
