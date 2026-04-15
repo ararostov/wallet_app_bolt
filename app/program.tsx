@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ChevronDown, ChevronUp, Lock } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -97,6 +97,7 @@ function PerkCard({ perk }: { perk: Perk }) {
 
 export default function ProgramScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { state } = useWallet();
   const [activeTab, setActiveTab] = useState<Tab>('Active');
@@ -104,8 +105,8 @@ export default function ProgramScreen() {
   const filtered = state.perks.filter((p) => STATUS_TO_TAB[p.status] === activeTab);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -125,7 +126,7 @@ export default function ProgramScreen() {
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No perks in this category</Text>
         ) : (
@@ -145,7 +146,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: {},
   tabText: { fontSize: 15, fontFamily: 'Inter-Medium' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 80 },
   perkCard: { borderRadius: 16, marginBottom: 10, overflow: 'hidden', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   perkCardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
   perkIconBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

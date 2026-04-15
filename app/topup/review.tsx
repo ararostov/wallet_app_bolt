@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { X, ArrowRight } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -11,6 +11,7 @@ import { formatCurrency } from '@/utils/format';
 
 export default function TopupReviewScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ amount: string; method: string }>();
   const { topUp, state } = useWallet();
   const { colors, isDark } = useTheme();
@@ -34,8 +35,8 @@ export default function TopupReviewScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <X size={22} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -83,7 +84,7 @@ export default function TopupReviewScreen() {
         )}
       </View>
 
-      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity
           style={[styles.primaryBtn, { backgroundColor: colors.primary }, loading && styles.primaryBtnDisabled]}
           onPress={handleConfirm}

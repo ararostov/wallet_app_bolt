@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -57,6 +57,7 @@ function RewardRow({ reward, onPress, colors, isDark }: { reward: Reward; onPres
 
 export default function RewardsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state, availableRewardsTotal } = useWallet();
   const { colors, isDark } = useTheme();
   const [activeBucket, setActiveBucket] = useState<Bucket>('all');
@@ -68,8 +69,8 @@ export default function RewardsScreen() {
     : state.rewards.filter((r) => r.bucket === activeBucket);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -78,7 +79,7 @@ export default function RewardsScreen() {
           <Text style={[styles.tierLink, { color: colors.primary }]}>Tier</Text>
         </TouchableOpacity>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
 
         <View style={[styles.hero, { backgroundColor: colors.surface }]}>
           <View style={styles.heroStatRow}>
@@ -189,7 +190,7 @@ export default function RewardsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 80 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 24, fontFamily: 'Inter-Bold' },

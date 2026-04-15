@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, X, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
@@ -32,12 +32,13 @@ If you have any questions about this document, please contact us at legal@tescow
 
 export default function LegalScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const [selectedDoc, setSelectedDoc] = useState<typeof LEGAL_DOCS[0] | null>(null);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -45,7 +46,7 @@ export default function LegalScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
         <View style={[styles.card, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
           {LEGAL_DOCS.map((doc, idx) => (
             <TouchableOpacity
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 80 },
   card: { borderRadius: 16, overflow: 'hidden', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   docRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   docRowBorder: { borderBottomWidth: 1 },
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', padding: 16, borderBottomWidth: 1 },
   modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold' },
   modalUpdated: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },
-  modalContent: { padding: 16, paddingBottom: 40 },
+  modalContent: { padding: 16, paddingBottom: 80 },
   docContent: { fontSize: 17, fontFamily: 'Inter-Regular', lineHeight: 24 },
   modalFooter: { padding: 16, borderTopWidth: 1 },
   downloadBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },

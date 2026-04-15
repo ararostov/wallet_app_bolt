@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Settings, Trash2, ShoppingBag, Gift, Shield, Megaphone, Star } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -17,6 +17,7 @@ const CATEGORY_ICONS: Record<string, { icon: any; color: string; bg: string }> =
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state, markNotificationRead, markAllNotificationsRead, deleteNotification } = useWallet();
   const { colors, isDark } = useTheme();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -26,8 +27,8 @@ export default function NotificationsScreen() {
     : state.notifications;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -54,7 +55,7 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {notifications.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No notifications</Text>
         ) : (
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   filterTextActive: { color: '#fff' },
   markAllBtn: { marginLeft: 'auto' },
   markAllText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  scroll: { paddingBottom: 32 },
+  scroll: { paddingBottom: 80 },
   notifRow: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, borderBottomWidth: 1, gap: 12 },
   notifIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   notifContent: { flex: 1, gap: 3 },

@@ -8,7 +8,7 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, ChevronRight, Smartphone, Building2, CreditCard, Plus } from 'lucide-react-native';
 import { Platform } from 'react-native';
@@ -31,6 +31,7 @@ const METHODS = [
 
 export default function TopupScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
@@ -44,8 +45,8 @@ export default function TopupScreen() {
   const isValid = amount >= 5;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()}>
           <X size={22} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -53,7 +54,7 @@ export default function TopupScreen() {
         <View style={{ width: 22 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {isBonusPending && (
           <View style={styles.bonusBanner}>
             <Text style={styles.bonusBannerText}>
@@ -106,7 +107,7 @@ export default function TopupScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.footer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + 8 }]}>
         {amount > 0 && (
           <Text style={[styles.footerSummary, { color: colors.textSecondary }]}>
             You'll pay <Text style={[styles.footerBold, { color: colors.text }]}>{formatCurrency(amount)}</Text>

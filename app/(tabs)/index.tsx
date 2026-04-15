@@ -6,7 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Bell, Plus, Users, Zap, Gift, Star, X, User, ShoppingBag, Coins, CircleArrowUp as ArrowUpCircle, Tag } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,6 +25,7 @@ export default function HomeScreen() {
     dismissBanner,
   } = useWallet();
 
+  const insets = useSafeAreaInsets();
   const { user, wallet, card, transactions, tier, dismissedBanners } = state;
   const recentTxs = transactions.slice(0, 5);
   const firstName = user?.firstName ?? 'there';
@@ -71,9 +72,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <View style={styles.header}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
           <Text style={[styles.walletTitle, { color: colors.text }]}>Tesco Wallet</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -265,13 +266,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { paddingBottom: 32 },
+  scroll: {},
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 0,
     paddingBottom: 4,
   },
   walletTitle: { fontSize: 20, fontFamily: 'Inter-Bold' },

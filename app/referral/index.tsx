@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Copy, Share2, ChevronDown, ChevronUp, Users, ChevronRight } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -31,6 +31,7 @@ const STAGE_COLORS_DARK: Record<string, { bg: string; text: string }> = {
 
 export default function ReferralScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
   const [howOpen, setHowOpen] = useState(false);
@@ -53,8 +54,8 @@ export default function ReferralScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -62,7 +63,7 @@ export default function ReferralScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
           <View style={[styles.heroIconBg, { backgroundColor: isDark ? colors.surfaceAlt : '#eff6ff' }]}>
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 80 },
   hero: { alignItems: 'center', gap: 10, paddingVertical: 20 },
   heroIconBg: { width: 80, height: 80, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   heroTitle: { fontSize: 30, fontFamily: 'Inter-Bold', letterSpacing: -0.5 },

@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Switch,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Globe, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -89,6 +89,7 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state, logout } = useWallet();
   const { colors, isDark, toggleTheme } = useTheme();
   const { user, tier } = state;
@@ -100,8 +101,8 @@ export default function ProfileScreen() {
   const email = user?.email ?? 'alex@example.com';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingTop: insets.top, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity style={[styles.backBtn, { backgroundColor: colors.surface }]} onPress={() => router.back()}>
             <ChevronLeft size={22} color={colors.text} />
@@ -182,7 +183,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 80 },
   headerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   screenTitle: { flex: 1, fontSize: 24, fontFamily: 'Inter-Bold', textAlign: 'center' },

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Copy, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -10,6 +10,7 @@ import { formatCurrency, formatDateLong, getTxColor, getTransactionIcon, getStat
 
 export default function TransactionDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
@@ -18,8 +19,8 @@ export default function TransactionDetailScreen() {
 
   if (!tx) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
           <TouchableOpacity onPress={() => router.back()}><ArrowLeft size={22} color={colors.text} /></TouchableOpacity>
           <Text style={[styles.title, { color: colors.text }]}>Transaction</Text>
           <View style={{ width: 36 }} />
@@ -42,8 +43,8 @@ export default function TransactionDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -51,7 +52,7 @@ export default function TransactionDetailScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={[styles.hero, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
           <View style={[styles.heroIcon, { backgroundColor: getTxColor(tx.type) + '20' }]}>
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: 80 },
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   notFoundText: { fontSize: 18, fontFamily: 'Inter-Regular' },
   hero: { padding: 32, alignItems: 'center', gap: 10, borderBottomWidth: 1 },

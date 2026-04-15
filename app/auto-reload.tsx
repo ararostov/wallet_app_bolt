@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { X, ArrowLeft, Zap, Gift, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 export default function AutoReloadScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { colors, isDark } = useTheme();
   const { state, updateAutoReload } = useWallet();
   const { autoReload } = state;
@@ -32,8 +33,8 @@ export default function AutoReloadScreen() {
   // Upsell screen when not yet enabled
   if (setupMode) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+      <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.surface }]}>
+        <TouchableOpacity style={[styles.closeBtn, { marginTop: insets.top }]} onPress={() => router.back()}>
           <X size={22} color={colors.textSecondary} />
         </TouchableOpacity>
 
@@ -77,8 +78,8 @@ export default function AutoReloadScreen() {
 
   // Settings screen when enabled/configuring
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -86,7 +87,7 @@ export default function AutoReloadScreen() {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
         <View style={[styles.enableCard, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
           <View>
             <Text style={[styles.enableTitle, { color: colors.text }]}>Auto-reload</Text>
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   // Upsell screen
   closeBtn: { position: 'absolute', top: 56, right: 20, zIndex: 10, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  upsellScroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 32, paddingTop: 80, paddingBottom: 20 },
+  upsellScroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 32, paddingTop: 80, paddingBottom: 80 },
   upsellIcon: { width: 100, height: 100, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 32 },
   upsellTitle: { fontSize: 32, fontFamily: 'Inter-Bold', textAlign: 'center', letterSpacing: -0.5, marginBottom: 16, lineHeight: 38 },
   upsellSub: { fontSize: 17, fontFamily: 'Inter-Regular', textAlign: 'center', lineHeight: 24, marginBottom: 36 },
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 80 },
   enableCard: { borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   enableTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold' },
   enableSub: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },

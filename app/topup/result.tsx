@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CircleCheck as CheckCircle, Clock, Circle as XCircle } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -12,6 +12,7 @@ export default function TopupResultScreen() {
   const params = useLocalSearchParams<{ state: string; amount: string; method: string }>();
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const resultState = (params.state as 'success' | 'pending' | 'failure') ?? 'success';
   const amount = parseFloat(params.amount ?? '50');
@@ -47,8 +48,8 @@ export default function TopupResultScreen() {
   const Icon = cfg.icon;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={[styles.iconCircle, { backgroundColor: cfg.iconBg }]}>
           <Icon size={56} color={cfg.iconColor} />
         </View>

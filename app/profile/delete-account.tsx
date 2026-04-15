@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, TriangleAlert as AlertTriangle, Eye, EyeOff } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -16,6 +16,7 @@ const REASONS = [
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state, logout } = useWallet();
   const { colors, isDark } = useTheme();
   const [step, setStep] = useState(1);
@@ -36,8 +37,8 @@ export default function DeleteAccountScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -46,7 +47,7 @@ export default function DeleteAccountScreen() {
       </View>
 
       {step === 1 ? (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
           <View style={[styles.warningRow, { backgroundColor: colors.redLight }]}>
             <AlertTriangle size={20} color={colors.red} />
             <Text style={[styles.warningText, { color: colors.red }]}>This action cannot be undone</Text>
@@ -92,7 +93,7 @@ export default function DeleteAccountScreen() {
           </TouchableOpacity>
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
           <Text style={[styles.step2Title, { color: colors.text }]}>Final confirmation</Text>
           <Text style={[styles.step2Sub, { color: colors.textSecondary }]}>
             Type <Text style={[styles.boldRed, { color: colors.red }]}>DELETE</Text> and enter your password to permanently delete your account.
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
-  scroll: { padding: 16, paddingBottom: 40 },
+  scroll: { padding: 16, paddingBottom: 80 },
   warningRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 12, marginBottom: 20 },
   warningText: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   sectionTitle: { fontSize: 17, fontFamily: 'Inter-Bold', marginBottom: 10 },

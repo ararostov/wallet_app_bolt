@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, ShoppingBag, Coins, CircleArrowUp as ArrowUpCircle, Tag, RotateCcw } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
@@ -52,6 +52,7 @@ function getTxIconColor(type: string, primaryColor: string) {
 
 export default function TransactionsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
   const [filter, setFilter] = useState<Filter>('All');
@@ -63,8 +64,8 @@ export default function TransactionsScreen() {
   const grouped = groupTransactionsByDate(filtered);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
@@ -86,7 +87,7 @@ export default function TransactionsScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView style={styles.listScroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView style={styles.listScroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
         {grouped.length === 0 ? (
           <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No transactions found</Text>
         ) : (
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, height: 36, justifyContent: 'center' },
   filterText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   filterTextActive: { color: '#fff' },
-  scroll: { paddingBottom: 32 },
+  scroll: { paddingBottom: 80 },
   dateHeader: { fontSize: 15, fontFamily: 'Inter-SemiBold', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, letterSpacing: 0.3 },
   txRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, gap: 12, borderBottomWidth: 1 },
   txIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
