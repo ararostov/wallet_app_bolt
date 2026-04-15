@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  type TextInput as TextInputType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -51,6 +52,10 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const lastNameRef = useRef<TextInputType>(null);
+  const dobRef = useRef<TextInputType>(null);
+  const emailRef = useRef<TextInputType>(null);
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!firstName.trim()) e.firstName = 'Required';
@@ -78,42 +83,76 @@ export default function ProfileScreen() {
           <Text style={[styles.title, { color: colors.text }]}>Tell us about yourself</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>We need a few details to set up your account securely.</Text>
 
-          {([
-            { label: 'First name', key: 'firstName', value: firstName, set: setFirstName, placeholder: 'Alex', textContentType: 'givenName' as const, autoComplete: 'given-name' as const },
-            { label: 'Last name', key: 'lastName', value: lastName, set: setLastName, placeholder: 'Johnson', textContentType: 'familyName' as const, autoComplete: 'family-name' as const },
-          ] as const).map(({ label, key, value, set, placeholder, textContentType, autoComplete }) => (
-            <View key={key} style={styles.field}>
-              <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors[key] && { borderColor: colors.red }]}
-                placeholder={placeholder}
-                placeholderTextColor={colors.textTertiary}
-                value={value}
-                onChangeText={set}
-                autoCapitalize="words"
-                textContentType={textContentType}
-                autoComplete={autoComplete}
-              />
-              {errors[key] && <Text style={[styles.errorText, { color: colors.red }]}>{errors[key]}</Text>}
-            </View>
-          ))}
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.text }]}>First name</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.firstName && { borderColor: colors.red }]}
+              placeholder="Alex"
+              placeholderTextColor={colors.textTertiary}
+              value={firstName}
+              onChangeText={(text) => {
+                setFirstName(text);
+                // Auto-advance on iOS autofill (value filled all at once from empty)
+                if (firstName.length === 0 && text.length > 1) {
+                  setTimeout(() => lastNameRef.current?.focus(), 50);
+                }
+              }}
+              autoCapitalize="words"
+              textContentType="givenName"
+              autoComplete="given-name"
+              returnKeyType="next"
+              onSubmitEditing={() => lastNameRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+            {errors.firstName && <Text style={[styles.errorText, { color: colors.red }]}>{errors.firstName}</Text>}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={[styles.label, { color: colors.text }]}>Last name</Text>
+            <TextInput
+              ref={lastNameRef}
+              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.lastName && { borderColor: colors.red }]}
+              placeholder="Johnson"
+              placeholderTextColor={colors.textTertiary}
+              value={lastName}
+              onChangeText={(text) => {
+                setLastName(text);
+                if (lastName.length === 0 && text.length > 1) {
+                  setTimeout(() => dobRef.current?.focus(), 50);
+                }
+              }}
+              autoCapitalize="words"
+              textContentType="familyName"
+              autoComplete="family-name"
+              returnKeyType="next"
+              onSubmitEditing={() => dobRef.current?.focus()}
+              blurOnSubmit={false}
+            />
+            {errors.lastName && <Text style={[styles.errorText, { color: colors.red }]}>{errors.lastName}</Text>}
+          </View>
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.text }]}>Date of birth</Text>
             <TextInput
+              ref={dobRef}
               style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.dob && { borderColor: colors.red }]}
               placeholder="DD / MM / YYYY"
               placeholderTextColor={colors.textTertiary}
               value={dob}
               onChangeText={(text) => {
-                const prev = dobRawDigits(dob);
                 const next = dobRawDigits(text);
                 if (next.length <= 8) {
                   setDob(formatDob(next));
+                  if (next.length === 8) {
+                    setTimeout(() => emailRef.current?.focus(), 50);
+                  }
                 }
               }}
               keyboardType="number-pad"
               maxLength={14}
+              returnKeyType="next"
+              onSubmitEditing={() => emailRef.current?.focus()}
+              blurOnSubmit={false}
             />
             {errors.dob && <Text style={[styles.errorText, { color: colors.red }]}>{errors.dob}</Text>}
           </View>
@@ -121,15 +160,23 @@ export default function ProfileScreen() {
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.text }]}>Email address</Text>
             <TextInput
+              ref={emailRef}
               style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.email && { borderColor: colors.red }]}
               placeholder="alex@example.com"
               placeholderTextColor={colors.textTertiary}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (email.length === 0 && text.includes('@')) {
+                  // autofilled email — stay on field, user can press Continue
+                }
+              }}
               keyboardType="email-address"
               textContentType="emailAddress"
               autoComplete="email"
               autoCapitalize="none"
+              returnKeyType="done"
+              onSubmitEditing={handleContinue}
             />
             {errors.email && <Text style={[styles.errorText, { color: colors.red }]}>{errors.email}</Text>}
           </View>
