@@ -10,18 +10,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X, ChevronRight, Smartphone, Building2, CreditCard } from 'lucide-react-native';
+import { X, ChevronRight, Smartphone, Building2, CreditCard, Plus } from 'lucide-react-native';
+import { Platform } from 'react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 import { formatCurrency } from '@/utils/format';
 
 const QUICK_AMOUNTS = [20, 50, 100, 200];
 
+const digitalWalletMethod = Platform.OS === 'android'
+  ? { id: 'google_pay', label: 'Google Pay', icon: Smartphone, isAddCard: false }
+  : { id: 'apple_pay', label: 'Apple Pay', icon: Smartphone, isAddCard: false };
+
 const METHODS = [
-  { id: 'apple_pay', label: 'Apple Pay', icon: Smartphone },
-  { id: 'google_pay', label: 'Google Pay', icon: Smartphone },
-  { id: 'bank', label: 'Bank Transfer', icon: Building2 },
-  { id: 'card', label: 'Saved card \u2022\u20224242', icon: CreditCard },
+  digitalWalletMethod,
+  { id: 'bank', label: 'Pay By Bank (Open Banking)', icon: Building2, isAddCard: false },
+  { id: 'card', label: 'Saved card ••4242', icon: CreditCard, isAddCard: false },
+  { id: 'add_card', label: 'Add new card', icon: Plus, isAddCard: true },
 ];
 
 export default function TopupScreen() {
@@ -130,11 +135,16 @@ export default function TopupScreen() {
             return (
               <TouchableOpacity
                 key={method.id}
-                style={[styles.methodOption, { borderColor: colors.border }, selectedMethod.id === method.id && { borderColor: colors.primary, backgroundColor: isDark ? colors.surfaceAlt : '#eff6ff' }]}
+                style={[
+                  styles.methodOption,
+                  { borderColor: colors.border },
+                  method.isAddCard && { borderStyle: 'dashed' },
+                  selectedMethod.id === method.id && { borderColor: colors.primary, backgroundColor: isDark ? colors.surfaceAlt : '#eff6ff' },
+                ]}
                 onPress={() => { setSelectedMethod(method); setMethodModalOpen(false); }}
               >
-                <Icon size={20} color={colors.primary} />
-                <Text style={[styles.methodOptionLabel, { color: colors.text }]}>{method.label}</Text>
+                <Icon size={20} color={method.isAddCard ? colors.textSecondary : colors.primary} />
+                <Text style={[styles.methodOptionLabel, { color: method.isAddCard ? colors.textSecondary : colors.text }]}>{method.label}</Text>
                 {selectedMethod.id === method.id && (
                   <View style={[styles.selectedDot, { backgroundColor: colors.primary }]} />
                 )}
@@ -157,7 +167,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   scroll: { padding: 16, paddingBottom: 120 },
   bonusBanner: {
     backgroundColor: '#fffbeb',
@@ -167,8 +177,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#fde68a',
   },
-  bonusBannerText: { fontSize: 14, fontFamily: 'Inter-Medium', color: '#92400e', lineHeight: 20 },
-  sectionLabel: { fontSize: 13, fontFamily: 'Inter-SemiBold', marginBottom: 10, letterSpacing: 0.3 },
+  bonusBannerText: { fontSize: 16, fontFamily: 'Inter-Medium', color: '#92400e', lineHeight: 20 },
+  sectionLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold', marginBottom: 10, letterSpacing: 0.3 },
   amountsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
   amountCard: {
     width: '47%',
@@ -178,9 +188,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     gap: 6,
   },
-  amountValue: { fontSize: 24, fontFamily: 'Inter-Bold' },
+  amountValue: { fontSize: 26, fontFamily: 'Inter-Bold' },
   bonusChip: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
-  bonusChipText: { fontSize: 11, fontFamily: 'Inter-SemiBold', color: '#15803d' },
+  bonusChipText: { fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#15803d' },
   customAmountRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -189,9 +199,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 4,
   },
-  poundSign: { fontSize: 22, fontFamily: 'Inter-SemiBold', marginRight: 4 },
-  customInput: { flex: 1, paddingVertical: 14, fontSize: 22, fontFamily: 'Inter-SemiBold' },
-  errorText: { fontSize: 12, marginBottom: 16, fontFamily: 'Inter-Regular' },
+  poundSign: { fontSize: 24, fontFamily: 'Inter-SemiBold', marginRight: 4 },
+  customInput: { flex: 1, paddingVertical: 14, fontSize: 24, fontFamily: 'Inter-SemiBold' },
+  errorText: { fontSize: 15, marginBottom: 16, fontFamily: 'Inter-Regular' },
   methodSelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -201,17 +211,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     marginBottom: 20,
   },
-  methodLabel: { flex: 1, fontSize: 15, fontFamily: 'Inter-Medium' },
+  methodLabel: { flex: 1, fontSize: 17, fontFamily: 'Inter-Medium' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, borderTopWidth: 1, gap: 8 },
-  footerSummary: { fontSize: 14, fontFamily: 'Inter-Regular', textAlign: 'center' },
+  footerSummary: { fontSize: 16, fontFamily: 'Inter-Regular', textAlign: 'center' },
   footerBold: { fontFamily: 'Inter-SemiBold' },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   modalSafe: { flex: 1 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 17, fontFamily: 'Inter-Bold' },
+  modalTitle: { fontSize: 19, fontFamily: 'Inter-Bold' },
   methodOption: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, marginHorizontal: 16, marginTop: 8, borderRadius: 12, borderWidth: 1.5 },
-  methodOptionLabel: { flex: 1, fontSize: 15, fontFamily: 'Inter-Medium' },
+  methodOptionLabel: { flex: 1, fontSize: 17, fontFamily: 'Inter-Medium' },
   selectedDot: { width: 10, height: 10, borderRadius: 5 },
 });

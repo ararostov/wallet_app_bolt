@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import Svg, { Path, G, Circle, Rect } from 'react-native-svg';
+import { FontAwesome } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
 
 const COUNTRIES = [
@@ -31,8 +32,23 @@ export default function SignupScreen() {
   const [referralExpanded, setReferralExpanded] = useState(false);
   const [referralCode, setReferralCode] = useState('');
 
+  const formatUKPhone = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 10);
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`;
+  };
+
+  const handlePhoneChange = (text: string) => {
+    let digits = text.replace(/\D/g, '');
+    if (digits.startsWith('44')) digits = digits.slice(2);
+    setPhoneValue(formatUKPhone(digits));
+  };
+
   const isValid =
-    method === 'phone' ? phoneValue.length >= 10 : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
+    method === 'phone'
+      ? phoneValue.replace(/\D/g, '').length === 10
+      : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
 
   const handleSend = () => {
     if (!isValid) return;
@@ -50,7 +66,7 @@ export default function SignupScreen() {
             <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
           </TouchableOpacity>
 
-          <Text style={[styles.title, { color: colors.text }]}>Create your account</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Create your Wallet Account</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign up to start earning cashback with Tesco Wallet.</Text>
 
           <View style={[styles.toggle, { backgroundColor: colors.surfaceAlt }]}>
@@ -76,12 +92,13 @@ export default function SignupScreen() {
               </TouchableOpacity>
               <TextInput
                 style={[styles.phoneInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-                placeholder="Mobile number"
+                placeholder="7700 900 000"
                 placeholderTextColor={colors.textTertiary}
                 keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
                 value={phoneValue}
-                onChangeText={setPhoneValue}
-                maxLength={15}
+                onChangeText={handlePhoneChange}
               />
             </View>
           ) : (
@@ -90,6 +107,8 @@ export default function SignupScreen() {
               placeholder="Email address"
               placeholderTextColor={colors.textTertiary}
               keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
               autoCapitalize="none"
               value={emailValue}
               onChangeText={setEmailValue}
@@ -136,12 +155,7 @@ export default function SignupScreen() {
 
           <View style={styles.socialRow}>
             <TouchableOpacity style={[styles.appleSocialBtn, isDark && { backgroundColor: '#fff' }]}>
-              <Svg width={18} height={18} viewBox="0 0 814 1000">
-                <Path
-                  fill={isDark ? '#000' : '#fff'}
-                  d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 443.9 0 341.1 0 244.8c0-150.7 97.6-230.5 193.7-230.5 50.6 0 92.8 34.9 124.1 34.9 29.7 0 76.5-36.9 134-36.9 54.3 0 150.4 18.6 204.7 109.9zm-135-91.6c-22-28.2-58.2-50.7-103.9-50.7-54.2 0-106.1 37-137.3 97.8C380.8 357.1 367 396 367 434.5c0 44.4 16.7 86.4 41.8 115.3 22.9 26.6 58.2 48.8 101.6 48.8 44.6 0 82.8-25.1 109.2-63.7 25-37 38-80.5 38-124.1 0-43.7-12.9-84.5-34.5-116.5z"
-                />
-              </Svg>
+              <FontAwesome name="apple" size={18} color={isDark ? '#000' : '#fff'} />
               <Text style={[styles.appleSocialBtnText, isDark && { color: '#000' }]}>Apple</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.googleSocialBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -171,9 +185,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: { flexGrow: 1, padding: 24, paddingBottom: 40 },
   backBtn: { marginBottom: 24 },
-  backText: { fontSize: 16, fontFamily: 'Inter-Medium' },
-  title: { fontSize: 28, fontFamily: 'Inter-Bold', marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
+  backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
+  title: { fontSize: 30, fontFamily: 'Inter-Bold', marginBottom: 8, letterSpacing: -0.5 },
+  subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
   toggle: {
     flexDirection: 'row',
     borderRadius: 12,
@@ -187,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   toggleBtnActive: { shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-  toggleText: { fontSize: 14, fontFamily: 'Inter-Medium' },
+  toggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
   phoneRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   countryPicker: {
     flexDirection: 'row',
@@ -198,15 +212,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 14,
   },
-  flag: { fontSize: 20 },
-  countryCode: { fontSize: 14, fontFamily: 'Inter-Medium' },
+  flag: { fontSize: 22 },
+  countryCode: { fontSize: 16, fontFamily: 'Inter-Medium' },
   phoneInput: {
     flex: 1,
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 15,
+    fontSize: 17,
     fontFamily: 'Inter-Regular',
   },
   input: {
@@ -214,7 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 15,
+    fontSize: 17,
     marginBottom: 16,
     fontFamily: 'Inter-Regular',
   },
@@ -225,7 +239,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignSelf: 'flex-start',
   },
-  referralToggleText: { fontSize: 14, fontFamily: 'Inter-Medium' },
+  referralToggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
   referralInput: { marginTop: 0 },
   primaryBtn: {
     borderRadius: 14,
@@ -234,10 +248,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
   dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 13, fontFamily: 'Inter-Regular' },
+  dividerText: { fontSize: 15, fontFamily: 'Inter-Regular' },
   socialRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   appleSocialBtn: {
     flex: 1,
@@ -249,7 +263,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  appleSocialBtnText: { fontSize: 14, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  appleSocialBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
   googleSocialBtn: {
     flex: 1,
     borderWidth: 1.5,
@@ -260,7 +274,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  googleSocialBtnText: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
-  legal: { fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  googleSocialBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  legal: { fontSize: 15, textAlign: 'center', lineHeight: 18 },
   legalLink: {},
 });

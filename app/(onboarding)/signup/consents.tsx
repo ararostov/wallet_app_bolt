@@ -34,7 +34,7 @@ function Stepper({ current, total }: { current: number; total: number }) {
 const stepStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 28 },
   step: { flex: 1, height: 4, borderRadius: 2 },
-  label: { fontSize: 12, fontFamily: 'Inter-Regular', marginLeft: 4 },
+  label: { fontSize: 15, fontFamily: 'Inter-Regular', marginLeft: 4 },
 });
 
 export default function ConsentsScreen() {
@@ -148,9 +148,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { flexGrow: 1, padding: 24, paddingBottom: 40 },
   backBtn: { marginBottom: 16 },
-  backText: { fontSize: 16, fontFamily: 'Inter-Medium' },
-  title: { fontSize: 26, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
+  backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
+  title: { fontSize: 28, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
+  subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
   consentRow: { flexDirection: 'row', gap: 14, marginBottom: 20, alignItems: 'flex-start' },
   checkbox: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 2,
@@ -158,11 +158,11 @@ const styles = StyleSheet.create({
   },
   consentContent: { flex: 1, gap: 4 },
   consentLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  consentLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  consentLabel: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
   requiredBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  requiredText: { fontSize: 11, fontFamily: 'Inter-SemiBold' },
-  consentDesc: { fontSize: 13, fontFamily: 'Inter-Regular', lineHeight: 18 },
-  readLink: { fontSize: 13, fontFamily: 'Inter-Medium', marginTop: 2 },
+  requiredText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  consentDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
+  readLink: { fontSize: 15, fontFamily: 'Inter-Medium', marginTop: 2 },
   primaryBtn: {
     borderRadius: 14,
     paddingVertical: 16,
@@ -170,11 +170,11 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   modalSafe: { flex: 1 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 20, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 18, fontFamily: 'Inter-Bold' },
+  modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold' },
   modalContent: { paddingHorizontal: 16, paddingVertical: 20, paddingBottom: 40 },
-  modalBody: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 24 },
+  modalBody: { fontSize: 17, fontFamily: 'Inter-Regular', lineHeight: 24 },
   modalFooter: { paddingHorizontal: 16, paddingVertical: 20, borderTopWidth: 1 },
 });

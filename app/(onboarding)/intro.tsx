@@ -54,7 +54,9 @@ export default function IntroScreen() {
 
   const goNext = () => {
     if (activeIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+      const nextIndex = activeIndex + 1;
+      setActiveIndex(nextIndex);
+      flatListRef.current?.scrollToOffset({ offset: nextIndex * width, animated: true });
     } else {
       goToSignup();
     }
@@ -105,16 +107,15 @@ export default function IntroScreen() {
           }}
         />
 
-        <View style={styles.dots}>
-          {SLIDES.map((_, i) => (
-            <View
-              key={i}
-              style={[styles.dot, { backgroundColor: colors.border }, i === activeIndex && { backgroundColor: colors.primary, width: 24 }]}
-            />
-          ))}
-        </View>
-
         <View style={styles.footer}>
+          <View style={styles.dots}>
+            {SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[styles.dot, { backgroundColor: colors.border }, i === activeIndex && { backgroundColor: colors.primary, width: 24 }]}
+              />
+            ))}
+          </View>
           <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={activeIndex === SLIDES.length - 1 ? goToSignup : goNext}>
             <Text style={styles.primaryBtnText}>{activeIndex === SLIDES.length - 1 ? 'Get started' : 'Next'}</Text>
           </TouchableOpacity>
@@ -124,6 +125,7 @@ export default function IntroScreen() {
         </View>
       </View>
     </SafeAreaView>
+
   );
 }
 
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: { flex: 1 },
   skipBtn: { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: 8 },
-  skipText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  skipText: { fontSize: 17, fontFamily: 'Inter-Medium' },
   slide: { flex: 1, alignItems: 'center', paddingHorizontal: 32 },
   illustrationBox: {
     width: '100%',
@@ -158,19 +160,19 @@ const styles = StyleSheet.create({
   },
   textBox: { marginTop: 32, alignItems: 'center', gap: 12 },
   headline: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: 'Inter-Bold',
     textAlign: 'center',
     lineHeight: 34,
     letterSpacing: -0.5,
   },
   body: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter-Regular',
     textAlign: 'center',
     lineHeight: 24,
   },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 24 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   footer: { paddingHorizontal: 24, paddingBottom: 32, gap: 12, marginTop: 'auto' },
   primaryBtn: {
@@ -178,11 +180,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
   },
-  primaryBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   secondaryBtn: {
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  secondaryBtnText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  secondaryBtnText: { fontSize: 17, fontFamily: 'Inter-Medium' },
 });

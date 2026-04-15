@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, ChevronUp, Star } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { formatCurrency } from '@/utils/format';
 import { useTheme } from '@/context/ThemeContext';
@@ -14,9 +14,9 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 const TIER_DATA = [
-  { name: 'Silver', threshold: '£0+', cashback: '2%', boosted: 'None', support: 'Standard', bonus: 'None' },
-  { name: 'Gold', threshold: '£500+', cashback: '3%', boosted: 'Tesco stores', support: 'Priority email', bonus: '£5 on anniversary' },
-  { name: 'Platinum', threshold: '£1,500+', cashback: '5%', boosted: 'All merchants', support: 'Priority 24/7', bonus: '£15 on anniversary' },
+  { name: 'Silver', threshold: '£0+', cashback: '2%' },
+  { name: 'Gold', threshold: '£500+', cashback: '3%' },
+  { name: 'Platinum', threshold: '£1,500+', cashback: '5%' },
 ];
 
 export default function TierScreen() {
@@ -73,25 +73,24 @@ export default function TierScreen() {
           const isActive = t.name === tier.current;
           const tc = TIER_COLORS[t.name];
           return (
-            <View key={t.name} style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: colors.border }, isActive && { borderColor: colors.primary }]}>
-              <View style={[styles.tierCardHeader, { backgroundColor: colors.surfaceAlt }]}>
-                <View style={[styles.tierDot, { backgroundColor: tc }]} />
-                <Text style={[styles.tierCardName, { color: tc }]}>{t.name}</Text>
-                {isActive && <View style={[styles.currentBadge, { backgroundColor: isDark ? '#1E3A5F' : '#dbeafe' }]}><Text style={[styles.currentBadgeText, { color: colors.primary }]}>Current</Text></View>}
-                <Text style={[styles.tierThreshold, { color: colors.textSecondary }]}>{t.threshold} spend</Text>
+            <View key={t.name} style={[styles.tierCard, { backgroundColor: colors.surface, borderColor: isActive ? colors.primary : colors.border }, isActive && { backgroundColor: isDark ? '#1E293B' : '#f8faff' }]}>
+              <View style={[styles.tierIconBg, { backgroundColor: isDark ? colors.surfaceAlt : '#f1f5f9' }]}>
+                <Star size={22} color={tc} />
               </View>
-              <View style={styles.tierCardBody}>
-                {[
-                  ['Cashback rate', t.cashback],
-                  ['Boosted merchants', t.boosted],
-                  ['Support', t.support],
-                  ['Anniversary bonus', t.bonus],
-                ].map(([label, value]) => (
-                  <View key={label} style={styles.tierInfoRow}>
-                    <Text style={[styles.tierInfoLabel, { color: colors.textSecondary }]}>{label}</Text>
-                    <Text style={[styles.tierInfoValue, { color: colors.text }]}>{value}</Text>
-                  </View>
-                ))}
+              <View style={styles.tierCardInfo}>
+                <View style={styles.tierCardNameRow}>
+                  <Text style={[styles.tierCardName, { color: tc }]}>{t.name}</Text>
+                  {isActive && (
+                    <View style={[styles.currentBadge, { backgroundColor: isDark ? '#1E3A5F' : '#dbeafe' }]}>
+                      <Text style={[styles.currentBadgeText, { color: colors.primary }]}>✓ Current</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.tierThreshold, { color: colors.textSecondary }]}>Spend {t.threshold} per year</Text>
+              </View>
+              <View style={styles.tierCashbackCol}>
+                <Text style={[styles.tierCashbackPct, { color: colors.text }]}>{t.cashback}</Text>
+                <Text style={[styles.tierCashbackLabel, { color: colors.textSecondary }]}>cashback</Text>
               </View>
             </View>
           );
@@ -122,34 +121,34 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   scroll: { padding: 16, paddingBottom: 40 },
   tierHero: { alignItems: 'center', paddingVertical: 24, gap: 12 },
   tierBadgeCircle: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, alignItems: 'center', justifyContent: 'center', gap: 4, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 6 },
-  tierStar: { fontSize: 28 },
-  tierName: { fontSize: 22, fontFamily: 'Inter-Bold' },
-  awayText: { fontSize: 15, fontFamily: 'Inter-Medium', textAlign: 'center' },
+  tierStar: { fontSize: 30 },
+  tierName: { fontSize: 24, fontFamily: 'Inter-Bold' },
+  awayText: { fontSize: 17, fontFamily: 'Inter-Medium', textAlign: 'center' },
   progressCard: { borderRadius: 16, padding: 16, marginBottom: 24, gap: 10, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  progressLabel: { fontSize: 14, fontFamily: 'Inter-Medium' },
-  progressValue: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
+  progressLabel: { fontSize: 16, fontFamily: 'Inter-Medium' },
+  progressValue: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   progressTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
   progressFill: { height: 8, borderRadius: 4 },
-  progressReset: { fontSize: 12, fontFamily: 'Inter-Regular' },
-  sectionTitle: { fontSize: 17, fontFamily: 'Inter-Bold', marginBottom: 12 },
-  tierCard: { borderRadius: 16, marginBottom: 12, overflow: 'hidden', borderWidth: 1.5 },
-  tierCardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 8 },
-  tierDot: { width: 12, height: 12, borderRadius: 6 },
-  tierCardName: { fontSize: 16, fontFamily: 'Inter-Bold', flex: 1 },
-  currentBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
-  currentBadgeText: { fontSize: 11, fontFamily: 'Inter-SemiBold' },
-  tierThreshold: { fontSize: 13, fontFamily: 'Inter-Medium' },
-  tierCardBody: { padding: 14, gap: 8 },
-  tierInfoRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  tierInfoLabel: { fontSize: 13, fontFamily: 'Inter-Regular' },
-  tierInfoValue: { fontSize: 13, fontFamily: 'Inter-SemiBold' },
+  progressReset: { fontSize: 15, fontFamily: 'Inter-Regular' },
+  sectionTitle: { fontSize: 19, fontFamily: 'Inter-Bold', marginBottom: 12 },
+  tierCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 16, marginBottom: 12, borderWidth: 1.5, padding: 16 },
+  tierIconBg: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  tierCardInfo: { flex: 1, gap: 4 },
+  tierCardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tierCardName: { fontSize: 18, fontFamily: 'Inter-Bold' },
+  currentBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  currentBadgeText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  tierThreshold: { fontSize: 15, fontFamily: 'Inter-Regular' },
+  tierCashbackCol: { alignItems: 'flex-end' },
+  tierCashbackPct: { fontSize: 22, fontFamily: 'Inter-Bold' },
+  tierCashbackLabel: { fontSize: 15, fontFamily: 'Inter-Regular' },
   expandSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderTopWidth: 1, marginTop: 8 },
-  expandTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  expandTitle: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
   expandContent: { paddingBottom: 16 },
-  expandText: { fontSize: 14, fontFamily: 'Inter-Regular', lineHeight: 22 },
+  expandText: { fontSize: 16, fontFamily: 'Inter-Regular', lineHeight: 22 },
 });

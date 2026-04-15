@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Copy, TriangleAlert as AlertTriangle } from 'lucide-react-native';
@@ -71,7 +71,7 @@ export default function TransactionDetailScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface, shadowColor: colors.shadowColor }]}>
           {[
             { label: 'Date & time', value: formatDateLong(tx.date) },
-            { label: 'Method', value: tx.method },
+            { label: 'Method', value: tx.method === 'digital_wallet' ? (Platform.OS === 'android' ? 'Google Wallet' : 'Apple Wallet') : tx.method },
             { label: 'Category', value: tx.category ?? '\u2014' },
           ].map(({ label, value }) => (
             <View key={label} style={[styles.infoRow, { borderBottomColor: colors.borderLight }]}>
@@ -147,39 +147,39 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   scroll: { paddingBottom: 40 },
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  notFoundText: { fontSize: 16, fontFamily: 'Inter-Regular' },
+  notFoundText: { fontSize: 18, fontFamily: 'Inter-Regular' },
   hero: { padding: 32, alignItems: 'center', gap: 10, borderBottomWidth: 1 },
   heroIcon: { width: 72, height: 72, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  heroIconText: { fontSize: 32 },
-  heroMerchant: { fontSize: 20, fontFamily: 'Inter-Bold' },
-  heroAmount: { fontSize: 36, fontFamily: 'Inter-Bold', letterSpacing: -1 },
+  heroIconText: { fontSize: 35 },
+  heroMerchant: { fontSize: 22, fontFamily: 'Inter-Bold' },
+  heroAmount: { fontSize: 38, fontFamily: 'Inter-Bold', letterSpacing: -1 },
   heroAmountPositive: { color: '#059669' },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, fontFamily: 'Inter-SemiBold' },
+  statusText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
   card: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, overflow: 'hidden', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, borderBottomWidth: 1 },
-  infoLabel: { fontSize: 14, fontFamily: 'Inter-Regular' },
-  infoValue: { fontSize: 14, fontFamily: 'Inter-SemiBold', textAlign: 'right', flex: 1, marginLeft: 16 },
-  infoValueMono: { fontSize: 13, fontFamily: 'Inter-Medium' },
+  infoLabel: { fontSize: 16, fontFamily: 'Inter-Regular' },
+  infoValue: { fontSize: 16, fontFamily: 'Inter-SemiBold', textAlign: 'right', flex: 1, marginLeft: 16 },
+  infoValueMono: { fontSize: 15, fontFamily: 'Inter-Medium' },
   refRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cashbackCard: { marginHorizontal: 16, marginTop: 12, backgroundColor: '#f0fdf4', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#bbf7d0' },
   cashbackHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cashbackTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold', color: '#15803d' },
-  cashbackAmount: { fontSize: 18, fontFamily: 'Inter-Bold', color: '#059669' },
-  cashbackNote: { fontSize: 12, color: '#16a34a', fontFamily: 'Inter-Regular', marginTop: 6 },
+  cashbackTitle: { fontSize: 17, fontFamily: 'Inter-SemiBold', color: '#15803d' },
+  cashbackAmount: { fontSize: 20, fontFamily: 'Inter-Bold', color: '#059669' },
+  cashbackNote: { fontSize: 15, color: '#16a34a', fontFamily: 'Inter-Regular', marginTop: 6 },
   linkedCard: { marginHorizontal: 16, marginTop: 12, borderRadius: 14, padding: 14, borderWidth: 1 },
-  linkedLabel: { fontSize: 12, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
+  linkedLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
   linkedRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  linkedMerchant: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
-  linkedAmount: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
+  linkedMerchant: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  linkedAmount: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
   disputeCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12, backgroundColor: '#fffbeb', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#fde68a' },
   disputeInfo: {},
-  disputeTitle: { fontSize: 14, fontFamily: 'Inter-SemiBold', color: '#92400e' },
-  disputeRef: { fontSize: 12, color: '#a16207', fontFamily: 'Inter-Regular' },
+  disputeTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#92400e' },
+  disputeRef: { fontSize: 15, color: '#a16207', fontFamily: 'Inter-Regular' },
   reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 16, marginTop: 20, paddingVertical: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#fde68a', backgroundColor: '#fffbeb' },
-  reportBtnText: { fontSize: 14, fontFamily: 'Inter-SemiBold', color: '#d97706' },
+  reportBtnText: { fontSize: 16, fontFamily: 'Inter-SemiBold', color: '#d97706' },
 });
