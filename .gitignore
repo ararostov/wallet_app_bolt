@@ -33,3 +33,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# claude code
+.claude/worktrees/
+google-service-account.json
