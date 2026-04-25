@@ -69,6 +69,26 @@ export function handleDeepLink(url: string): void {
       router.push('/notifications');
       return;
     }
+    case 'topup': {
+      // walletapp://topup/return?paymentOrderId=… — fallback path for the
+      // PSP redirect on Android, where `expo-web-browser` may not auto-close
+      // the in-app browser on every device. iOS AuthSession resolves via the
+      // promise instead and never reaches this branch.
+      const subroute = segments[1];
+      if (subroute === 'return') {
+        const paymentOrderIdRaw =
+          queryParams.paymentOrderId ?? queryParams.po;
+        const paymentOrderId =
+          typeof paymentOrderIdRaw === 'string' ? paymentOrderIdRaw : undefined;
+        if (paymentOrderId) {
+          router.push({
+            pathname: '/topup/result',
+            params: { paymentOrderId },
+          });
+        }
+      }
+      return;
+    }
     default: {
       logDebug('Unknown deep link', { url, root });
     }

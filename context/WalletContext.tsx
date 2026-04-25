@@ -37,6 +37,20 @@ import type {
 } from '../types/card';
 import type { MoneyAmount } from '../types/auth';
 import type { PaymentMethod as ApiPaymentMethod } from '../types/paymentMethods';
+
+// Lightweight backend-shape transaction record — kept loose because spec 06
+// owns the canonical type. Stored in `transactionsApi` so the home / receipt
+// flows can find a topup transaction by paymentOrderId once backend starts
+// returning one in the topup payload.
+export interface ApiTransactionRecord {
+  id: string;
+  type: 'topup' | 'purchase' | 'cashback' | 'bonus' | 'refund';
+  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  amount: { amountMinor: number; currency: string };
+  occurredAt: string;
+  reference?: string | null;
+  paymentOrderId?: string | null;
+}
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -121,6 +135,11 @@ interface WalletState {
   // currently mock-shaped); reducer keeps both in sync only via dedicated
   // PAYMENT_METHODS/* actions, never automatically.
   paymentMethodsApi: ApiPaymentMethod[] | null;
+  // Backend-shape transactions slice (forward-compat for spec 06). Stays
+  // null until either spec 06 lands or the topup status payload starts
+  // carrying a linked transaction. Coexists with the legacy `transactions`
+  // mock slice; the two are NEVER kept in sync automatically.
+  transactionsApi: ApiTransactionRecord[] | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -168,6 +187,14 @@ type WalletAction =
   | { type: 'PAYMENT_METHODS/UPSERT_API'; payload: ApiPaymentMethod }
   | { type: 'PAYMENT_METHODS/REMOVE_API'; payload: { id: string } }
   | { type: 'PAYMENT_METHODS/SET_DEFAULT_API'; payload: { id: string } }
+  // --- Transactions slice (spec 05-topup / 06-transactions) backend-shape
+  // Backend-shape transaction record. Spec 06 will define the rich
+  // `Transaction` resource; spec 05 only emits this when backend returns a
+  // linked transaction in the topup status payload (currently it does not —
+  // see open question §10 of 05-topup). The action is wired now so result.tsx
+  // can pick it up the moment backend starts returning it without a reducer
+  // change.
+  | { type: 'TRANSACTIONS/UPSERT_API'; payload: ApiTransactionRecord }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -272,6 +299,7 @@ const defaultState: WalletState = {
   tierApi: null,
   autoReloadApi: null,
   paymentMethodsApi: null,
+  transactionsApi: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -633,6 +661,19 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
           isDefault: p.id === id,
         })),
       };
+    }
+
+    // --- Transactions slice (spec 05/06) ----------------------------------
+
+    case 'TRANSACTIONS/UPSERT_API': {
+      const incoming = action.payload;
+      const current = state.transactionsApi ?? [];
+      const idx = current.findIndex((t) => t.id === incoming.id);
+      const next =
+        idx >= 0
+          ? current.map((t, i) => (i === idx ? incoming : t))
+          : [incoming, ...current];
+      return { ...state, transactionsApi: next };
     }
 
     default:

@@ -98,10 +98,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   TOPUP_MONTHLY_LIMIT_EXCEEDED: 'Monthly top-up limit reached.',
   TOPUP_BALANCE_CEILING_EXCEEDED: 'Top-up would exceed your balance limit.',
   INSUFFICIENT_FUNDS: 'Insufficient funds.',
+  INSUFFICIENT_LIMIT_AVAILABLE: 'Your account limit is not sufficient.',
   AMOUNT_TOO_SMALL: 'Amount is below the minimum.',
   AMOUNT_TOO_LARGE: 'Amount exceeds the maximum allowed.',
   WALLET_FROZEN: 'Your wallet is frozen. Contact support.',
   WALLET_NOT_FOUND: 'Wallet not found.',
+
+  // Top-up (05-topup) — codes that don't already appear in the Wallet/PSP
+  // sections above. Names are taken verbatim from
+  // app/public/openapi/paths/topup.yaml.
+  RETURN_URL_NOT_ALLOWED:
+    'This return URL is not allowed. Please update the app and try again.',
+  PAYMENT_ORDER_NOT_FOUND: "We can't find this top-up request.",
 
   // Auto-reload (02-wallet)
   AUTO_RELOAD_INVALID_THRESHOLD:
