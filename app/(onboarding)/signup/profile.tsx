@@ -1,9 +1,15 @@
 // Signup step 2 — first/last name, DOB (native picker, age >= 18) and the
 // secondary identifier (email if user signed up with phone, vice versa).
-// No API call here — everything goes into signupDraft.
+//
+// This screen now owns the `POST /auth/register` call. Legal consents and
+// marketing pref were captured on the previous screen and live in
+// `signupDraft.acceptedConsentIds` / `marketingOptIn`. On Continue we build
+// the full RegisterRequest from the draft and fire the mutation; on success
+// we replace to the OTP screen.
 
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -26,6 +32,10 @@ import { useWallet } from '@/context/WalletContext';
 import { ProgressStepper } from '@/components/ui/ProgressStepper';
 import { isValidDob18plus, isValidE164, isValidEmail } from '@/utils/validators';
 import { formatDate } from '@/utils/format';
+import { useRegister } from '@/hooks/useRegister';
+import { ApiError, mapErrorCode } from '@/utils/errors';
+import { logEvent } from '@/utils/logger';
+import type { RegisterRequest } from '@/types/auth';
 
 function isoFromDate(d: Date): string {
   const yyyy = d.getFullYear().toString().padStart(4, '0');
@@ -50,9 +60,12 @@ export default function ProfileScreen() {
   );
   const [pickerOpen, setPickerOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const lastNameRef = useRef<TextInputType>(null);
   const secondaryRef = useRef<TextInputType>(null);
+
+  const register = useRegister();
 
   const maxDob = useMemo(() => {
     const d = new Date();
@@ -86,21 +99,98 @@ export default function ProfileScreen() {
     return Object.keys(e).length === 0;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (register.loading) return;
     if (!validate()) return;
+    setSubmitError(null);
+
     const dobIso = dob ? isoFromDate(dob) : null;
     const isPhoneMethod = draft.method === 'phone';
+    const trimmedFirst = firstName.trim();
+    const trimmedLast = lastName.trim();
+    const finalEmail = isPhoneMethod ? (secondary.trim() || null) : draft.email;
+    const finalPhoneE164 = isPhoneMethod ? draft.phoneE164 : (secondary.trim() || null);
+
+    // Persist the latest profile fields back to the draft before firing the
+    // mutation — so a transient failure doesn't lose what the user typed.
     dispatch({
       type: 'AUTH/UPDATE_DRAFT',
       payload: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: trimmedFirst,
+        lastName: trimmedLast,
         dateOfBirth: dobIso,
-        email: isPhoneMethod ? (secondary.trim() || null) : draft.email,
-        phoneE164: isPhoneMethod ? draft.phoneE164 : (secondary.trim() || null),
+        email: finalEmail,
+        phoneE164: finalPhoneE164,
       },
     });
-    router.push('/(onboarding)/signup/consents');
+
+    if (!dobIso) {
+      // validate() already covers this; defensive.
+      return;
+    }
+
+    const body: RegisterRequest = {
+      firstName: trimmedFirst,
+      lastName: trimmedLast,
+      email: finalEmail ?? undefined,
+      phoneE164: finalPhoneE164 ?? undefined,
+      dateOfBirth: dobIso,
+      marketingOptIn: draft.marketingOptIn,
+      consentedDocumentIds: draft.acceptedConsentIds,
+      referralCode: draft.referralCode ?? undefined,
+    };
+
+    try {
+      logEvent('signup_otp_requested', { method: draft.method });
+      await register.mutate(body);
+      router.replace('/(onboarding)/signup/otp');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409 && err.code === 'CUSTOMER_ALREADY_REGISTERED') {
+          Alert.alert(
+            'Already registered',
+            mapErrorCode(err.code) ?? err.message,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Log in',
+                onPress: () => router.replace('/(onboarding)/login'),
+              },
+            ],
+          );
+          return;
+        }
+        if (err.status === 422 && err.code === 'UNDERAGE_CUSTOMER') {
+          Alert.alert('Underage', mapErrorCode(err.code) ?? err.message);
+          return;
+        }
+        if (err.status === 422 && err.code === 'VALIDATION_FAILED') {
+          // Most common case: backend rejected the consent set — typically
+          // because Terms of Service was missing from consentedDocumentIds, or
+          // a new required document was published since we cached the list.
+          // Send the user back to screen 1 to re-review the legal docs.
+          const fields = err.details as
+            | Record<string, string[] | undefined>
+            | undefined;
+          const consentMessage = fields?.consentedDocumentIds?.[0];
+          Alert.alert(
+            'Please review your consents',
+            consentMessage ??
+              'Some required consents are missing. Please review and try again.',
+            [
+              {
+                text: 'Review',
+                onPress: () => router.replace('/(onboarding)/signup'),
+              },
+            ],
+          );
+          return;
+        }
+        setSubmitError(mapErrorCode(err.code) ?? err.message);
+        return;
+      }
+      setSubmitError('Network error. Please check your connection and try again.');
+    }
   };
 
   const onDobChange = (event: DateTimePickerEvent, selected?: Date) => {
@@ -121,11 +211,22 @@ export default function ProfileScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
-          <ProgressStepper current={1} total={3} />
+          <ProgressStepper current={1} total={2} />
           <Text style={[styles.title, { color: colors.text }]}>Tell us about yourself</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             We need a few details to set up your account securely.
           </Text>
+
+          {submitError && (
+            <View
+              style={[
+                styles.errorBanner,
+                { backgroundColor: colors.redLight, borderColor: colors.red },
+              ]}
+            >
+              <Text style={[styles.errorBannerText, { color: colors.red }]}>{submitError}</Text>
+            </View>
+          )}
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.text }]}>First name</Text>
@@ -239,8 +340,19 @@ export default function ProfileScreen() {
             {errors.secondary && <Text style={[styles.errorText, { color: colors.red }]}>{errors.secondary}</Text>}
           </View>
 
-          <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={handleContinue}>
-            <Text style={styles.primaryBtnText}>Continue</Text>
+          <TouchableOpacity
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: colors.primary },
+              register.loading && styles.primaryBtnDisabled,
+            ]}
+            onPress={handleContinue}
+            disabled={register.loading}
+            accessibilityState={{ busy: register.loading, disabled: register.loading }}
+          >
+            <Text style={styles.primaryBtnText}>
+              {register.loading ? 'Sending code…' : 'Continue'}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -290,6 +402,8 @@ const styles = StyleSheet.create({
   backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
   title: { fontSize: 28, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
   subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
+  errorBanner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16, gap: 6 },
+  errorBannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   field: { marginBottom: 16 },
   label: { fontSize: 16, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
   input: {
@@ -317,6 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
+  primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalSheet: { padding: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24, gap: 12 },

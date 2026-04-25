@@ -7,7 +7,6 @@ import type { SignupDraft } from '@/context/WalletContext';
 export type SignupResumeRoute =
   | '/(onboarding)/signup'
   | '/(onboarding)/signup/profile'
-  | '/(onboarding)/signup/consents'
   | '/(onboarding)/signup/otp';
 
 // Structural check against `initialSignupDraft` — true when nothing the user
@@ -41,7 +40,8 @@ export function isSignupDraftEmpty(draft: SignupDraft): boolean {
 //      window is still open → resume on the OTP screen so the code the user
 //      already received remains usable.
 //   2. Otherwise, pick the earliest step whose required fields are missing.
-//      `signup` (channel + identifier) → `profile` (name + DOB) → `consents`.
+//      `signup` (channel + identifier + inline legal consents) → `profile`
+//      (name + DOB), which now also fires /auth/register on Continue.
 export function selectSignupResumeRoute(
   draft: SignupDraft,
   now: number = Date.now(),
@@ -64,10 +64,7 @@ export function selectSignupResumeRoute(
   if (!hasIdentifier) {
     return '/(onboarding)/signup';
   }
-  if (!draft.firstName || !draft.lastName || !draft.dateOfBirth) {
-    return '/(onboarding)/signup/profile';
-  }
-  return '/(onboarding)/signup/consents';
+  return '/(onboarding)/signup/profile';
 }
 
 // Whether the draft's OTP window has lapsed. Consumers use this on cold-

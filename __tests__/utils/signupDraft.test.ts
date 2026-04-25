@@ -106,7 +106,22 @@ describe('selectSignupResumeRoute', () => {
     expect(selectSignupResumeRoute(draft, now)).toBe('/(onboarding)/signup/profile');
   });
 
-  it('routes to /signup/consents when profile is complete but pending /auth/register', () => {
+  it('routes to /signup/profile when consents have been accepted on screen 1 but profile is empty', () => {
+    // After the new flow's screen 1, the draft holds an identifier plus
+    // accepted legal documents — but no name / DOB yet. The user should
+    // resume on /signup/profile, where both the remaining fields and the
+    // /auth/register call now live.
+    const draft: SignupDraft = {
+      ...initialSignupDraft,
+      method: 'email',
+      email: 'alex@example.com',
+      acceptedConsentIds: [1, 2],
+      marketingOptIn: true,
+    };
+    expect(selectSignupResumeRoute(draft, now)).toBe('/(onboarding)/signup/profile');
+  });
+
+  it('routes to /signup/profile when profile is complete but /auth/register has not run yet', () => {
     const draft: SignupDraft = {
       ...initialSignupDraft,
       method: 'email',
@@ -114,7 +129,8 @@ describe('selectSignupResumeRoute', () => {
       firstName: 'Alex',
       lastName: 'Smith',
       dateOfBirth: '1990-01-01',
+      acceptedConsentIds: [1, 2],
     };
-    expect(selectSignupResumeRoute(draft, now)).toBe('/(onboarding)/signup/consents');
+    expect(selectSignupResumeRoute(draft, now)).toBe('/(onboarding)/signup/profile');
   });
 });

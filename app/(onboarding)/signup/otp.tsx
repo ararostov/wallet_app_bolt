@@ -139,7 +139,7 @@ export default function SignupOtpScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
-          <ProgressStepper current={3} total={3} />
+          <ProgressStepper current={2} total={2} />
 
           <Text
             style={[styles.title, { color: colors.text }]}

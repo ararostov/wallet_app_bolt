@@ -1,11 +1,23 @@
-// Signup step 1 — channel (phone/email) + identifier + optional referral code.
-// No API call here; the data lands in signupDraft and the user moves on to
-// /signup/profile. The actual register request goes out from /signup/consents.
+// Signup step 1 — channel (phone/email) + identifier + optional referral code
+// + inline legal consents + marketing opt-in toggle.
+//
+// No API call here; all inputs land in signupDraft and the user moves on to
+// /signup/profile. The actual register request goes out from /signup/profile
+// after the user provides name + DOB. PII therefore only leaves the device
+// once the user has explicitly accepted the required legal documents on this
+// screen — UK GDPR-driven UX: consent is visible at the moment it's given.
+//
+// Marketing opt-in is a SEPARATE field from legal documents — folded into a
+// single boolean for the eventual register call (RegisterRequest.marketingOptIn).
+// Channel-specific marketing consents (email / SMS / push) are not part of the
+// legal-documents flow.
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +32,11 @@ import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { isValidE164, isValidEmail } from '@/utils/validators';
+import { useQuery } from '@/hooks/useQuery';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { Badge } from '@/components/ui/Badge';
+import { legalApi } from '@/utils/api/legal';
+import type { LegalDocumentListItem } from '@/types/legal';
 
 const COUNTRIES = [
   { flag: '\u{1F1EC}\u{1F1E7}', code: '+44', name: 'GB' },
@@ -46,6 +63,58 @@ export default function SignupScreen() {
   );
   const [referralCode, setReferralCode] = useState(draft.referralCode ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // --- Legal documents -------------------------------------------------------
+  // Same query key as `/legal/index.tsx` so the cache is shared across the app.
+  const legalQuery = useQuery<LegalDocumentListItem[]>(
+    'legal-documents',
+    async () => {
+      const data = await legalApi.list();
+      return { data };
+    },
+    {
+      // Backend Cache-Control says 10 min — match it.
+      ttlMs: 10 * 60 * 1000,
+      staleMs: 60 * 1000,
+      refetchOnFocus: false,
+    },
+  );
+
+  const documents = useMemo(() => legalQuery.data ?? [], [legalQuery.data]);
+
+  // Sort: required first (so the user can't miss them), then by published
+  // date descending. Stable enough for the small list (<= 4 rows on MVP).
+  const sortedDocuments = useMemo(() => {
+    return [...documents].sort((a, b) => {
+      if (a.required !== b.required) return a.required ? -1 : 1;
+      return b.publishedAt.localeCompare(a.publishedAt);
+    });
+  }, [documents]);
+
+  const [accepted, setAccepted] = useState<Record<string, boolean>>(() => {
+    // Pre-seed from the persisted draft so a returning user keeps their ticks.
+    const seeded: Record<string, boolean> = {};
+    for (const id of draft.acceptedConsentIds) {
+      seeded[String(id)] = true;
+    }
+    return seeded;
+  });
+  const [marketingOptIn, setMarketingOptIn] = useState<boolean>(
+    draft.marketingOptIn ?? false,
+  );
+
+  // Reconcile the acceptance map with the latest document set — drop entries
+  // for documents that no longer appear, keep ticks for documents that do.
+  useEffect(() => {
+    if (documents.length === 0) return;
+    setAccepted((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const doc of documents) {
+        next[doc.id] = prev[doc.id] ?? false;
+      }
+      return next;
+    });
+  }, [documents]);
 
   // Re-prefill referral if a deep link arrives mid-screen.
   useEffect(() => {
@@ -100,9 +169,49 @@ export default function SignupScreen() {
     return { ok: Object.keys(e).length === 0, phoneE164, email };
   };
 
+  const requiredOk =
+    sortedDocuments.length > 0 &&
+    sortedDocuments
+      .filter((d) => d.required)
+      .every((d) => accepted[d.id]);
+
+  const hasDocuments = sortedDocuments.length > 0;
+
+  const contactValid =
+    method === 'phone'
+      ? phoneValue.replace(/\D/g, '').length >= 7
+      : isValidEmail(emailValue.trim());
+
+  // CTA enable rule: contact valid AND legal documents loaded AND all required
+  // docs accepted. Loading and error states keep the CTA muted.
+  const ctaDisabled =
+    !contactValid ||
+    legalQuery.loading ||
+    !!legalQuery.error ||
+    !hasDocuments ||
+    !requiredOk;
+
+  const toggleConsent = (id: string) => {
+    setAccepted((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const openDocument = (doc: LegalDocumentListItem) => {
+    router.push({ pathname: '/legal/[id]', params: { id: doc.id } });
+  };
+
   const handleContinue = () => {
+    if (ctaDisabled) return;
     const { ok, phoneE164, email } = validate();
     if (!ok) return;
+
+    // Backend `consentedDocumentIds` items are typed as `integer`. The list
+    // endpoint serialises ids as strings (project bigint-as-string convention)
+    // — convert once at the boundary.
+    const consentedDocumentIds = sortedDocuments
+      .filter((d) => accepted[d.id])
+      .map((d) => Number(d.id))
+      .filter((n) => Number.isFinite(n));
+
     dispatch({
       type: 'AUTH/UPDATE_DRAFT',
       payload: {
@@ -110,15 +219,12 @@ export default function SignupScreen() {
         phoneE164,
         email,
         referralCode: referralCode.trim() || null,
+        acceptedConsentIds: consentedDocumentIds,
+        marketingOptIn,
       },
     });
     router.push('/(onboarding)/signup/profile');
   };
-
-  const isValid =
-    method === 'phone'
-      ? phoneValue.replace(/\D/g, '').length >= 7
-      : isValidEmail(emailValue.trim());
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
@@ -260,16 +366,137 @@ export default function SignupScreen() {
             </View>
           )}
 
+          {/* --- Legal documents ----------------------------------------- */}
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Review and accept
+            </Text>
+            <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+              Please review and accept the following to continue.
+            </Text>
+          </View>
+
+          {legalQuery.loading && !hasDocuments && (
+            <View style={styles.loading}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Loading legal documents…
+              </Text>
+            </View>
+          )}
+
+          {legalQuery.error && (
+            <View
+              style={[
+                styles.banner,
+                { backgroundColor: colors.redLight, borderColor: colors.red },
+              ]}
+            >
+              <Text style={[styles.bannerText, { color: colors.red }]}>
+                We couldn&apos;t load the legal documents. Please check your connection and try again.
+              </Text>
+              <Pressable
+                onPress={() => legalQuery.refetch()}
+                style={styles.retryBtn}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.retryText, { color: colors.red }]}>Retry</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {!legalQuery.loading && !legalQuery.error && !hasDocuments && (
+            <View
+              style={[
+                styles.banner,
+                { backgroundColor: colors.amberLight, borderColor: colors.amber },
+              ]}
+            >
+              <Text style={[styles.bannerText, { color: colors.amber }]}>
+                Legal documents are not available — please try again later.
+              </Text>
+              <Pressable
+                onPress={() => legalQuery.refetch()}
+                style={styles.retryBtn}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.retryText, { color: colors.amber }]}>Retry</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {sortedDocuments.map((doc) => (
+            <Pressable
+              key={doc.id}
+              style={styles.consentRow}
+              onPress={() => toggleConsent(doc.id)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: !!accepted[doc.id] }}
+              accessibilityLabel={`${doc.title}, ${doc.required ? 'required' : 'optional'}`}
+            >
+              <View style={{ marginTop: 2 }}>
+                <Checkbox
+                  checked={!!accepted[doc.id]}
+                  onToggle={() => toggleConsent(doc.id)}
+                  accessibilityLabel={doc.title}
+                />
+              </View>
+              <View style={styles.consentContent}>
+                <View style={styles.consentLabelRow}>
+                  <Text style={[styles.consentLabel, { color: colors.text }]}>{doc.title}</Text>
+                  {doc.required && <Badge label="Required" variant="error" size="sm" />}
+                </View>
+                <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
+                  Version {doc.version}
+                </Text>
+                <TouchableOpacity onPress={() => openDocument(doc)} accessibilityRole="link">
+                  <Text style={[styles.readLink, { color: colors.primary }]}>Read full text →</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          ))}
+
+          {/* --- Marketing toggle ---------------------------------------- */}
+          {hasDocuments && (
+            <Pressable
+              style={styles.consentRow}
+              onPress={() => setMarketingOptIn((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: marketingOptIn }}
+              accessibilityLabel="Marketing communications, optional"
+            >
+              <View style={{ marginTop: 2 }}>
+                <Checkbox
+                  checked={marketingOptIn}
+                  onToggle={() => setMarketingOptIn((v) => !v)}
+                  accessibilityLabel="Marketing communications"
+                />
+              </View>
+              <View style={styles.consentContent}>
+                <View style={styles.consentLabelRow}>
+                  <Text style={[styles.consentLabel, { color: colors.text }]}>
+                    Marketing communications
+                  </Text>
+                </View>
+                <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
+                  Receive product updates, personalised offers, and rewards news. You can change this
+                  later in your profile.
+                </Text>
+              </View>
+            </Pressable>
+          )}
+
           <TouchableOpacity
             style={[
               styles.primaryBtn,
               { backgroundColor: colors.primary },
-              !isValid && styles.primaryBtnDisabled,
+              ctaDisabled && styles.primaryBtnDisabled,
             ]}
             onPress={handleContinue}
-            disabled={!isValid}
+            disabled={ctaDisabled}
+            accessibilityState={{ disabled: ctaDisabled }}
           >
-            <Text style={styles.primaryBtnText}>Continue</Text>
+            <Text style={styles.primaryBtnText}>Agree and continue</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -330,6 +557,21 @@ const styles = StyleSheet.create({
   referralToggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
   referralInput: { marginTop: 0 },
   errorText: { fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 4 },
+  sectionHeader: { marginTop: 24, marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
+  sectionHint: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 20 },
+  banner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16, gap: 6 },
+  bannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  retryBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+  retryText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  loading: { paddingVertical: 24, alignItems: 'center', gap: 8 },
+  loadingText: { fontSize: 15, fontFamily: 'Inter-Regular' },
+  consentRow: { flexDirection: 'row', gap: 14, marginBottom: 20, alignItems: 'flex-start' },
+  consentContent: { flex: 1, gap: 4 },
+  consentLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  consentLabel: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  consentDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
+  readLink: { fontSize: 15, fontFamily: 'Inter-Medium', marginTop: 2 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
