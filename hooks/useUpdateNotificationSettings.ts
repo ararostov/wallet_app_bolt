@@ -73,11 +73,11 @@ export function useUpdateNotificationSettings(): UseUpdateNotificationSettingsRe
     async (
       payload: UpdateNotificationSettingsRequest,
     ): Promise<NotificationSettings | null> => {
-      const previous = state.notificationSettingsApi;
+      const previous = state.notificationSettings;
       // Optimistic merge.
       if (previous) {
         const merged = mergeSettings(previous, payload);
-        dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS_API', payload: merged });
+        dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS', payload: merged });
       }
 
       setLoading(true);
@@ -87,13 +87,13 @@ export function useUpdateNotificationSettings(): UseUpdateNotificationSettingsRe
           payload,
           idempotencyKeyRef.current,
         );
-        dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS_API', payload: result });
+        dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS', payload: result });
         // Rotate the key so the next save uses a fresh one.
         idempotencyKeyRef.current = newIdempotencyKey();
         return result;
       } catch (e) {
         if (previous) {
-          dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS_API', payload: previous });
+          dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS', payload: previous });
         }
         logError(e, { where: 'useUpdateNotificationSettings' });
         setError(e instanceof Error ? e : new Error(String(e)));
@@ -102,7 +102,7 @@ export function useUpdateNotificationSettings(): UseUpdateNotificationSettingsRe
         setLoading(false);
       }
     },
-    [dispatch, state.notificationSettingsApi],
+    [dispatch, state.notificationSettings],
   );
 
   return { loading, error, updateSettings };

@@ -1,5 +1,5 @@
 // useTierState — GET /tier with 5 min stale window inside a 1 h TTL cache.
-// Hydrates state.tierApiFull on every successful fetch.
+// Hydrates state.tier on every successful fetch.
 
 import { useEffect } from 'react';
 
@@ -29,7 +29,7 @@ export function useTierState(): QueryResult<Tier> {
 
   useEffect(() => {
     if (query.data) {
-      dispatch({ type: 'TIER/SET_API', payload: query.data });
+      dispatch({ type: 'TIER/SET', payload: query.data });
     }
   }, [query.data, dispatch]);
 

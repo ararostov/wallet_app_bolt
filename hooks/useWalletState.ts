@@ -3,9 +3,9 @@
 // - Wraps useQuery with TTL 30 s / stale 10 s / refetch-on-focus per spec
 //   docs/mobile/specs/02-wallet.ru.md §6.
 // - On every successful fetch, dispatches `WALLET/HYDRATE_FROM_STATE` so the
-//   WalletContext slice (`walletApi`, `cardApi`, `tierApi`, `autoReloadApi`)
-//   stays in sync with backend truth. Cached state is read by the screens
-//   on mount; this hook simply refreshes it.
+//   WalletContext slice (`wallet`, `card`, `tierSummary`, `autoReload`) stays
+//   in sync with backend truth. Cached state is read by the screens on mount;
+//   this hook simply refreshes it.
 
 import { useEffect } from 'react';
 

@@ -76,14 +76,14 @@ export function useReferralFriends(
             const fresh = items.filter((f) => !known.has(f.id));
             const merged = [...prev, ...fresh];
             dispatch({
-              type: 'REFERRAL/APPEND_FRIENDS_API',
+              type: 'REFERRAL/APPEND_FRIENDS',
               payload: fresh,
             });
             return merged;
           });
         } else {
           setData(items);
-          dispatch({ type: 'REFERRAL/SET_FRIENDS_API', payload: items });
+          dispatch({ type: 'REFERRAL/SET_FRIENDS', payload: items });
         }
         setCursor(nextCursor);
         setHasMore(more);

@@ -25,11 +25,11 @@ export function useMarkNotificationRead(): UseMarkNotificationReadResult {
 
   const markRead = useCallback(
     async (id: string): Promise<Notification | null> => {
-      const previous = state.notificationsApi?.find((n) => n.id === id) ?? null;
+      const previous = state.notifications?.find((n) => n.id === id) ?? null;
       const wasUnread = previous ? previous.readAt === null : false;
       // Optimistic dispatch.
       dispatch({
-        type: 'NOTIFICATIONS/MARK_READ_API',
+        type: 'NOTIFICATIONS/MARK_READ',
         payload: { id, readAt: new Date().toISOString() },
       });
       setLoading(true);
@@ -37,13 +37,13 @@ export function useMarkNotificationRead(): UseMarkNotificationReadResult {
       try {
         const updated = await notificationsApi.markRead(id);
         // Reconcile with server-truth (server-side `readAt`).
-        dispatch({ type: 'NOTIFICATIONS/UPSERT_API', payload: updated });
+        dispatch({ type: 'NOTIFICATIONS/UPSERT', payload: updated });
         return updated;
       } catch (e) {
         const isNotFound = e instanceof ApiError && e.status === 404;
         if (isNotFound) {
           // Stale local copy — drop it and let the unread count rebalance.
-          dispatch({ type: 'NOTIFICATIONS/REMOVE_API', payload: { id } });
+          dispatch({ type: 'NOTIFICATIONS/REMOVE', payload: { id } });
           // The MARK_READ_API above already decremented; REMOVE_API would
           // decrement again on a still-unread row, but our optimistic
           // mark-read flipped readAt to a non-null value so the second
@@ -52,11 +52,11 @@ export function useMarkNotificationRead(): UseMarkNotificationReadResult {
         }
         // Rollback the optimistic flip.
         if (previous && wasUnread) {
-          dispatch({ type: 'NOTIFICATIONS/UPSERT_API', payload: previous });
-          if (state.unreadNotificationsCountApi !== null) {
+          dispatch({ type: 'NOTIFICATIONS/UPSERT', payload: previous });
+          if (state.unreadNotificationsCount !== null) {
             dispatch({
-              type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API',
-              payload: state.unreadNotificationsCountApi + 1,
+              type: 'NOTIFICATIONS/SET_UNREAD_COUNT',
+              payload: state.unreadNotificationsCount + 1,
             });
           }
         }
@@ -67,7 +67,7 @@ export function useMarkNotificationRead(): UseMarkNotificationReadResult {
         setLoading(false);
       }
     },
-    [dispatch, state.notificationsApi, state.unreadNotificationsCountApi],
+    [dispatch, state.notifications, state.unreadNotificationsCount],
   );
 
   return { loading, error, markRead };

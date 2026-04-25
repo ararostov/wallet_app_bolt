@@ -101,7 +101,7 @@ export function useRewards(options: UseRewardsOptions = {}): UseRewardsResult {
             const fresh = items.filter((r) => !known.has(r.id));
             const merged = [...prev, ...fresh];
             dispatch({
-              type: 'REWARDS/APPEND_API',
+              type: 'REWARDS/APPEND',
               payload: fresh,
             });
             const summary = computeSummary(merged);
@@ -112,7 +112,7 @@ export function useRewards(options: UseRewardsOptions = {}): UseRewardsResult {
           });
         } else {
           setData(items);
-          dispatch({ type: 'REWARDS/SET_API', payload: items });
+          dispatch({ type: 'REWARDS/SET', payload: items });
           const summary = computeSummary(items);
           if (summary) {
             dispatch({ type: 'REWARDS/SET_SUMMARY', payload: summary });

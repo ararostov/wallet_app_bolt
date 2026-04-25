@@ -58,7 +58,7 @@ export function useCard(options: UseCardOptions = {}): UseCardResult {
   // Hydrate the WalletContext slice on every successful fetch.
   useEffect(() => {
     if (!query.data) return;
-    dispatch({ type: 'CARD/SET_API', payload: query.data.card });
+    dispatch({ type: 'CARD/SET', payload: query.data.card });
   }, [query.data, dispatch]);
 
   // --- Polling -------------------------------------------------------------

@@ -47,7 +47,7 @@ export default function TierScreen(): React.ReactElement {
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const tierQuery = useTierState();
-  const tier = tierQuery.data ?? state.tierApiFull;
+  const tier = tierQuery.data ?? state.tier;
   const refreshing = tierQuery.loading && tier !== null;
 
   const renderProgressCopy = (): string | null => {

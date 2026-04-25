@@ -21,12 +21,12 @@ export function useDeleteNotification(): UseDeleteNotificationResult {
 
   const remove = useCallback(
     async (id: string): Promise<void> => {
-      const previous = state.notificationsApi?.find((n) => n.id === id) ?? null;
-      const previousCount = state.unreadNotificationsCountApi;
+      const previous = state.notifications?.find((n) => n.id === id) ?? null;
+      const previousCount = state.unreadNotificationsCount;
       const wasUnread = previous ? previous.readAt === null : false;
 
       // Optimistic remove.
-      dispatch({ type: 'NOTIFICATIONS/REMOVE_API', payload: { id } });
+      dispatch({ type: 'NOTIFICATIONS/REMOVE', payload: { id } });
 
       setLoading(true);
       setError(null);
@@ -39,10 +39,10 @@ export function useDeleteNotification(): UseDeleteNotificationResult {
         }
         // Rollback.
         if (previous) {
-          dispatch({ type: 'NOTIFICATIONS/UPSERT_API', payload: previous });
+          dispatch({ type: 'NOTIFICATIONS/UPSERT', payload: previous });
           if (wasUnread && previousCount !== null) {
             dispatch({
-              type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API',
+              type: 'NOTIFICATIONS/SET_UNREAD_COUNT',
               payload: previousCount,
             });
           }
@@ -54,7 +54,7 @@ export function useDeleteNotification(): UseDeleteNotificationResult {
         setLoading(false);
       }
     },
-    [dispatch, state.notificationsApi, state.unreadNotificationsCountApi],
+    [dispatch, state.notifications, state.unreadNotificationsCount],
   );
 
   return { loading, error, remove };

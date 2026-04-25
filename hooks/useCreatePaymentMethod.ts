@@ -31,7 +31,7 @@ export function useCreatePaymentMethod(
       invalidateKeys: [PAYMENT_METHODS_QUERY_KEY],
       onSuccess: (response) => {
         dispatch({
-          type: 'PAYMENT_METHODS/UPSERT_API',
+          type: 'PAYMENT_METHODS/UPSERT',
           payload: response.paymentMethod,
         });
         options.onSuccess?.(response);

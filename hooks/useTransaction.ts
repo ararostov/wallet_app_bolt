@@ -37,7 +37,7 @@ export function useTransaction(
   useEffect(() => {
     if (!query.data) return;
     dispatch({
-      type: 'TRANSACTIONS/UPSERT_API',
+      type: 'TRANSACTIONS/UPSERT',
       payload: query.data.transaction,
     });
     if (query.data.activeDispute) {

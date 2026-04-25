@@ -53,12 +53,12 @@ export default function AutoReloadScreen() {
   const { colors, isDark } = useTheme();
   const { state } = useWallet();
 
-  const { walletApi, autoReloadApi, paymentMethods, paymentMethodsApi } = state;
-  const currency = walletApi?.currency ?? 'GBP';
+  const { wallet, autoReload, paymentMethods } = state;
+  const currency = wallet?.currency ?? 'GBP';
 
-  // Prefer the backend-shape payment-methods slice once it has been hydrated
-  // by the dedicated list screen (spec 04). Fallback to the legacy mock slice
-  // so the picker keeps working before the user visits payment-methods.
+  // Backend-shape payment-methods slice (spec 04). Stays null until the user
+  // visits the payment-methods screen at least once; in that case the picker
+  // shows an empty state with the "Add a method" CTA.
   type PickerOption = {
     id: string;
     label: string;
@@ -66,56 +66,45 @@ export default function AutoReloadScreen() {
     isDefault: boolean;
   };
   const pickerOptions: PickerOption[] = useMemo(() => {
-    if (paymentMethodsApi) {
-      return paymentMethodsApi
-        .filter((pm) => pm.status === 'active')
-        .map((pm) => {
-          const brand =
-            pm.brand?.charAt(0).toUpperCase() + (pm.brand?.slice(1) ?? '');
-          const label = pm.bankName ?? brand ?? 'Card';
-          return {
-            id: pm.id,
-            label,
-            last4: pm.panLast4,
-            isDefault: pm.isDefault,
-          };
-        });
-    }
-    return paymentMethods.map((pm) => ({
-      id: pm.id,
-      label: pm.label,
-      last4: pm.last4 ?? null,
-      isDefault: pm.isDefault,
-    }));
-  }, [paymentMethodsApi, paymentMethods]);
+    return (paymentMethods ?? [])
+      .filter((pm) => pm.status === 'active')
+      .map((pm) => {
+        const brand =
+          pm.brand?.charAt(0).toUpperCase() + (pm.brand?.slice(1) ?? '');
+        const label = pm.bankName ?? brand ?? 'Card';
+        return {
+          id: pm.id,
+          label,
+          last4: pm.panLast4,
+          isDefault: pm.isDefault,
+        };
+      });
+  }, [paymentMethods]);
 
   // --- Local form state (initialised from cached autoReload, or defaults). -
 
-  const [enabled, setEnabled] = useState<boolean>(autoReloadApi?.enabled ?? false);
-  const [setupMode, setSetupMode] = useState<boolean>(autoReloadApi != null);
+  const [enabled, setEnabled] = useState<boolean>(autoReload?.enabled ?? false);
+  const [setupMode, setSetupMode] = useState<boolean>(autoReload != null);
 
   const [triggerBalanceMinor, setTriggerBalanceMinor] = useState<number>(
-    autoReloadApi?.triggerBalance.amountMinor ?? 1000,
+    autoReload?.triggerBalance.amountMinor ?? 1000,
   );
   const [reloadAmountMinor, setReloadAmountMinor] = useState<number>(
-    autoReloadApi?.reloadAmount.amountMinor ?? 5000,
+    autoReload?.reloadAmount.amountMinor ?? 5000,
   );
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(
-    autoReloadApi?.paymentMethod?.id ??
-      // Prefer the API slice's default if it has been hydrated; fall back to
-      // the legacy mock-shape default flag.
-      paymentMethodsApi?.find((pm) => pm.isDefault)?.id ??
-      paymentMethods.find((pm) => pm.isDefault)?.id ??
+    autoReload?.paymentMethod?.id ??
+      paymentMethods?.find((pm) => pm.isDefault)?.id ??
       null,
   );
   const [dailyCapMinor, setDailyCapMinor] = useState<number | null>(
-    autoReloadApi?.dailyCap?.amountMinor ?? null,
+    autoReload?.dailyCap?.amountMinor ?? null,
   );
   const [monthlyCapMinor, setMonthlyCapMinor] = useState<number | null>(
-    autoReloadApi?.monthlyCap?.amountMinor ?? null,
+    autoReload?.monthlyCap?.amountMinor ?? null,
   );
   const [showCaps, setShowCaps] = useState<boolean>(
-    autoReloadApi?.dailyCap != null || autoReloadApi?.monthlyCap != null,
+    autoReload?.dailyCap != null || autoReload?.monthlyCap != null,
   );
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -276,7 +265,7 @@ export default function AutoReloadScreen() {
 
   // --- Upsell variant -----------------------------------------------------
 
-  if (!setupMode && !autoReloadApi) {
+  if (!setupMode && !autoReload) {
     return (
       <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.surface }]}>
         <TouchableOpacity
@@ -392,12 +381,12 @@ export default function AutoReloadScreen() {
           />
         </View>
 
-        {autoReloadApi?.disableReason === 'consecutive_failures' && (
+        {autoReload?.disableReason === 'consecutive_failures' && (
           <View style={[styles.warnCard, { backgroundColor: isDark ? '#7F1D1D' : '#fef2f2' }]}>
             <AlertTriangle size={18} color={colors.red} />
             <Text style={[styles.warnText, { color: colors.text }]}>
-              Auto-reload was paused after {autoReloadApi.consecutiveFailureCount} failed
-              {autoReloadApi.consecutiveFailureCount === 1 ? ' attempt' : ' attempts'}. Update your
+              Auto-reload was paused after {autoReload.consecutiveFailureCount} failed
+              {autoReload.consecutiveFailureCount === 1 ? ' attempt' : ' attempts'}. Update your
               payment source and save to re-enable.
             </Text>
           </View>

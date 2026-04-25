@@ -1,6 +1,6 @@
 // Card limits screen — backend-wired per docs/mobile/specs/03-cards.ru.md §4.2.
 //
-// Reads the current effective limits from `state.cardApi` and lets the user
+// Reads the current effective limits from `state.card` and lets the user
 // override (or reset) daily / monthly caps. Both values are entered as
 // numeric strings (£X.XX) and converted to minor units before submit.
 //
@@ -61,11 +61,11 @@ export default function CardLimitsScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const { state } = useWallet();
-  const card = fullCard(state.cardApi);
+  const card = fullCard(state.card);
   const updateLimits = useUpdateCardLimits();
 
   const bounds = DEFAULT_CARD_LIMIT_BOUNDS;
-  const currency = card?.currency ?? state.walletApi?.currency ?? bounds.currency;
+  const currency = card?.currency ?? state.wallet?.currency ?? bounds.currency;
 
   const initialDaily = card?.dailyLimit?.amountMinor ?? null;
   const initialMonthly = card?.monthlyLimit?.amountMinor ?? null;

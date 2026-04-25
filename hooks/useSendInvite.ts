@@ -87,7 +87,7 @@ export function useSendInvite(): UseSendInviteResult {
             // local Friends slice so the UI reflects the change before
             // the next /referral/friends fetch.
             dispatch({
-              type: 'REFERRAL/UPSERT_FRIEND_API',
+              type: 'REFERRAL/UPSERT_FRIEND',
               payload: inviteToFriend(result.invite),
             });
 

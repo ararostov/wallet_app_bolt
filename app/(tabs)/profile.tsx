@@ -160,9 +160,11 @@ export default function ProfileScreen() {
             <Text style={[styles.avatarName, { color: colors.text }]}>{fullName}</Text>
             <Text style={[styles.avatarEmail, { color: colors.textSecondary }]}>{email}</Text>
           </View>
-          <View style={[styles.tierBadge, { backgroundColor: isDark ? '#78350F' : '#fefce8' }]}>
-            <Text style={[styles.tierBadgeText, { color: isDark ? '#FBBF24' : '#92400e' }]}>★ {tier.current}</Text>
-          </View>
+          {tier && (
+            <View style={[styles.tierBadge, { backgroundColor: isDark ? '#78350F' : '#fefce8' }]}>
+              <Text style={[styles.tierBadgeText, { color: isDark ? '#FBBF24' : '#92400e' }]}>★ {tier.current.name}</Text>
+            </View>
+          )}
           <ChevronRight size={16} color={colors.textTertiary} />
         </TouchableOpacity>
 

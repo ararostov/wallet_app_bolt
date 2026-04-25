@@ -1,6 +1,6 @@
 // Card tab — backend-wired per docs/mobile/specs/03-cards.ru.md §4.1.
 //
-// Reads `state.cardApi` (full `Card` after the first GET /card refresh).
+// Reads `state.card` (full `Card` after the first GET /card refresh).
 // Renders five visual states based on `lifecycleStatus`:
 //
 //   null / no card  → "Issue your card" empty state
@@ -93,7 +93,7 @@ export default function CardScreen() {
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
 
-  const card = fullCard(state.cardApi);
+  const card = fullCard(state.card);
   const lifecycle = deriveLifecycle(card);
   const isPending = lifecycle === 'requested' || lifecycle === 'issued';
 

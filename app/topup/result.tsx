@@ -117,7 +117,7 @@ export default function TopupResultScreen() {
     status.data !== undefined && TERMINAL_STATUSES.has(status.data.status);
 
   const amountMinor = status.data?.amount.amountMinor ?? 0;
-  const currency = status.data?.amount.currency ?? state.walletApi?.currency ?? 'GBP';
+  const currency = status.data?.amount.currency ?? state.wallet?.currency ?? 'GBP';
 
   const handlePrimary = (): void => {
     switch (display.kind) {

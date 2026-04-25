@@ -47,57 +47,37 @@ export default function HomeScreen() {
 
   const query = useWalletState();
 
-  const { user, walletApi, cardApi, tierApi, autoReloadApi, transactions, transactionsApi, dismissedBanners } = state;
+  const { user, wallet, card, tierSummary, autoReload, transactions, rewards, dismissedBanners } = state;
 
-  // Prefer the spec-06 backend-shape feed (state.transactionsApi) when it has
-  // been hydrated by the transactions list screen. Until then fall back to
-  // the legacy mock-shape `transactions` slice so the home widget keeps
-  // rendering without a round-trip.
-  type RecentTx =
-    | {
-        kind: 'api';
-        id: string;
-        type: 'topup' | 'auto_reload' | 'purchase' | 'cashback' | 'bonus' | 'refund';
-        merchant: string | null;
-        date: string;
-        amountMinor: number;
-        currency: string;
-      }
-    | {
-        kind: 'legacy';
-        id: string;
-        type: 'topup' | 'purchase' | 'cashback' | 'bonus' | 'refund';
-        merchant: string | undefined;
-        date: string;
-        amount: number;
-      };
-  const recentTxs: RecentTx[] = transactionsApi
-    ? transactionsApi.slice(0, 5).map((t) => ({
-        kind: 'api',
-        id: t.id,
-        type: t.type,
-        merchant: t.merchantName,
-        date: t.occurredAt,
-        amountMinor: t.amount.amountMinor,
-        currency: t.amount.currency,
-      }))
-    : transactions.slice(0, 5).map((t) => ({
-        kind: 'legacy',
-        id: t.id,
-        type: t.type,
-        merchant: t.merchant,
-        date: t.date,
-        amount: t.amount,
-      }));
+  // Backend-shape spec-06 feed (state.transactions). Until the user has
+  // visited the transactions list screen at least once it stays null and the
+  // recent-transactions widget renders an empty state.
+  type RecentTx = {
+    id: string;
+    type: 'topup' | 'auto_reload' | 'purchase' | 'cashback' | 'bonus' | 'refund';
+    merchant: string | null;
+    date: string;
+    amountMinor: number;
+    currency: string;
+  };
+  const recentTxs: RecentTx[] = (transactions ?? []).slice(0, 5).map((t) => ({
+    id: t.id,
+    type: t.type,
+    merchant: t.merchantName,
+    date: t.occurredAt,
+    amountMinor: t.amount.amountMinor,
+    currency: t.amount.currency,
+  }));
   const firstName = user?.firstName ?? 'there';
 
   // First-mount paint guard: if we have no cached state at all and the query
   // is still loading, show a skeleton placeholder.
-  const showFirstMountSkeleton = !walletApi && query.loading && !query.data;
+  const showFirstMountSkeleton = !wallet && query.loading && !query.data;
 
-  // Cashback expiry hint (read from legacy mock rewards slice — spec 07
-  // will replace this with real loyalty data).
-  const cashbackRewards = state.rewards.filter(
+  // Cashback expiry hint — read from the spec-07 backend-shape rewards feed
+  // (state.rewards). Stays null until the rewards screen has hydrated the
+  // slice; in that case the warning chip is simply omitted.
+  const cashbackRewards = (rewards ?? []).filter(
     (r) =>
       r.bucket === 'cashback' &&
       (r.status === 'available' || r.status === 'pending') &&
@@ -118,8 +98,8 @@ export default function HomeScreen() {
   // --- Derived state -------------------------------------------------------
 
   const cardStatusLabel = useMemo(() => {
-    if (!cardApi) return 'No card';
-    switch (cardApi.status) {
+    if (!card) return 'No card';
+    switch (card.status) {
       case 'active':
         return 'Active';
       case 'frozen':
@@ -133,39 +113,39 @@ export default function HomeScreen() {
       default:
         return 'Inactive';
     }
-  }, [cardApi]);
+  }, [card]);
 
-  const cardStatusActive = cardApi?.status === 'active';
+  const cardStatusActive = card?.status === 'active';
 
   const balanceLabel = useMemo(() => {
-    if (!walletApi) return formatCurrency(0);
-    return formatMoney(walletApi.balance.amountMinor, walletApi.balance.currency);
-  }, [walletApi]);
+    if (!wallet) return formatCurrency(0);
+    return formatMoney(wallet.balance.amountMinor, wallet.balance.currency);
+  }, [wallet]);
 
-  const tierName = tierApi?.currentLevel ?? null;
+  const tierName = tierSummary?.currentLevel ?? null;
   const tierProgressLabel = useMemo(() => {
-    if (!tierApi || !tierApi.target) return null;
-    const remainingMinor = Math.max(0, tierApi.target.amountMinor - tierApi.progress.amountMinor);
-    return `${formatMoney(remainingMinor, tierApi.target.currency)} to next`;
-  }, [tierApi]);
+    if (!tierSummary || !tierSummary.target) return null;
+    const remainingMinor = Math.max(0, tierSummary.target.amountMinor - tierSummary.progress.amountMinor);
+    return `${formatMoney(remainingMinor, tierSummary.target.currency)} to next`;
+  }, [tierSummary]);
 
   const ceilingPct =
-    walletApi && walletApi.balance.amountMinor > 0
-      ? walletApi.balance.amountMinor / WALLET_BALANCE_CEILING_MINOR
+    wallet && wallet.balance.amountMinor > 0
+      ? wallet.balance.amountMinor / WALLET_BALANCE_CEILING_MINOR
       : 0;
   const showCeilingBanner =
     ceilingPct >= 0.9 && !dismissedBanners.includes('wallet-ceiling');
 
   const showAutoReloadFailureBanner = useMemo(() => {
-    if (!autoReloadApi) return false;
+    if (!autoReload) return false;
     return (
-      autoReloadApi.disableReason === 'consecutive_failures' ||
-      autoReloadApi.disableReason === 'payment_method_removed' ||
-      autoReloadApi.consecutiveFailureCount > 0
+      autoReload.disableReason === 'consecutive_failures' ||
+      autoReload.disableReason === 'payment_method_removed' ||
+      autoReload.consecutiveFailureCount > 0
     );
-  }, [autoReloadApi]);
+  }, [autoReload]);
 
-  const autoReloadEnabled = autoReloadApi?.enabled === true;
+  const autoReloadEnabled = autoReload?.enabled === true;
   const showAutoReloadUpsell =
     !autoReloadEnabled &&
     !showAutoReloadFailureBanner &&
@@ -361,7 +341,7 @@ export default function HomeScreen() {
               <View style={styles.bannerText}>
                 <Text style={[styles.bannerTitle, { color: colors.text }]}>Auto-reload paused</Text>
                 <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>
-                  {autoReloadApi?.disableReason === 'payment_method_removed'
+                  {autoReload?.disableReason === 'payment_method_removed'
                     ? 'The payment method was removed. Set up auto-reload again.'
                     : 'Recent charges failed. Review your payment source.'}
                 </Text>
@@ -473,18 +453,13 @@ export default function HomeScreen() {
             <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No transactions yet</Text>
           ) : (
             recentTxs.map((tx) => {
-              const amountMinor =
-                tx.kind === 'api' ? tx.amountMinor : Math.round(tx.amount * 100);
-              const isPositive = amountMinor > 0;
+              const isPositive = tx.amountMinor > 0;
               const isCashback = tx.type === 'cashback' || tx.type === 'bonus';
               const isTopup = tx.type === 'topup' || tx.type === 'auto_reload';
               const amountColor = isCashback || isTopup ? colors.green : colors.text;
               const iconType = tx.type === 'auto_reload' ? 'topup' : tx.type;
               const TxIcon = getTxIcon(iconType);
-              const amountLabel =
-                tx.kind === 'api'
-                  ? `${isPositive ? '+' : ''}${formatMoney(tx.amountMinor, tx.currency)}`
-                  : `${isPositive ? '+' : ''}${formatCurrency(tx.amount)}`;
+              const amountLabel = `${isPositive ? '+' : ''}${formatMoney(tx.amountMinor, tx.currency)}`;
               return (
                 <TouchableOpacity
                   key={tx.id}

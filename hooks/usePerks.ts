@@ -1,5 +1,5 @@
 // usePerks — GET /perks with a 5 min stale window inside a 1 h TTL cache.
-// Hydrates state.perksApi on every successful fetch.
+// Hydrates state.perks on every successful fetch.
 
 import { useEffect } from 'react';
 
@@ -30,7 +30,7 @@ export function usePerks(tier?: string): QueryResult<Perk[]> {
 
   useEffect(() => {
     if (query.data) {
-      dispatch({ type: 'PERKS/SET_API', payload: query.data });
+      dispatch({ type: 'PERKS/SET', payload: query.data });
     }
   }, [query.data, dispatch]);
 

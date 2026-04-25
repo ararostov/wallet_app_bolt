@@ -20,12 +20,12 @@ export function useMarkAllNotificationsRead(): UseMarkAllNotificationsReadResult
 
   const markAllRead = useCallback(
     async (type?: NotificationType): Promise<MarkAllReadResult | null> => {
-      const previousList = state.notificationsApi;
-      const previousCount = state.unreadNotificationsCountApi;
+      const previousList = state.notifications;
+      const previousCount = state.unreadNotificationsCount;
 
       // Optimistic flip.
       dispatch({
-        type: 'NOTIFICATIONS/MARK_ALL_READ_API',
+        type: 'NOTIFICATIONS/MARK_ALL_READ',
         payload: { readAt: new Date().toISOString() },
       });
 
@@ -38,7 +38,7 @@ export function useMarkAllNotificationsRead(): UseMarkAllNotificationsReadResult
         try {
           const fresh = await notificationsApi.getCount();
           dispatch({
-            type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API',
+            type: 'NOTIFICATIONS/SET_UNREAD_COUNT',
             payload: fresh.unreadCount,
           });
         } catch (countError) {
@@ -49,13 +49,13 @@ export function useMarkAllNotificationsRead(): UseMarkAllNotificationsReadResult
         // Rollback.
         if (previousList) {
           dispatch({
-            type: 'NOTIFICATIONS/SET_API',
+            type: 'NOTIFICATIONS/SET',
             payload: { items: previousList },
           });
         }
         if (previousCount !== null) {
           dispatch({
-            type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API',
+            type: 'NOTIFICATIONS/SET_UNREAD_COUNT',
             payload: previousCount,
           });
         }
@@ -66,7 +66,7 @@ export function useMarkAllNotificationsRead(): UseMarkAllNotificationsReadResult
         setLoading(false);
       }
     },
-    [dispatch, state.notificationsApi, state.unreadNotificationsCountApi],
+    [dispatch, state.notifications, state.unreadNotificationsCount],
   );
 
   return { loading, error, markAllRead };

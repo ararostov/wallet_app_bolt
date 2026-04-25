@@ -55,7 +55,7 @@ function AppContent() {
       notificationsApi
         .getCount()
         .then((r) =>
-          dispatch({ type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API', payload: r.unreadCount }),
+          dispatch({ type: 'NOTIFICATIONS/SET_UNREAD_COUNT', payload: r.unreadCount }),
         )
         .catch((e) => logError(e, { where: 'foregroundNotification.count' }));
     });
@@ -81,7 +81,7 @@ function AppContent() {
         handledRef.current.add(notificationId);
         // Optimistic mark-read locally then fire-and-forget to the server.
         dispatch({
-          type: 'NOTIFICATIONS/MARK_READ_API',
+          type: 'NOTIFICATIONS/MARK_READ',
           payload: { id: notificationId, readAt: new Date().toISOString() },
         });
         notificationsApi
@@ -125,10 +125,10 @@ function AppContent() {
 
   // Sync iOS badge count to the unread mirror in WalletContext.
   useEffect(() => {
-    const count = state.unreadNotificationsCountApi;
+    const count = state.unreadNotificationsCount;
     if (count === null) return;
     void syncBadgeCount(count);
-  }, [state.unreadNotificationsCountApi]);
+  }, [state.unreadNotificationsCount]);
 
   return (
     <>

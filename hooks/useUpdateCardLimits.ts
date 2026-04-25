@@ -26,7 +26,7 @@ export function useUpdateCardLimits(): MutationResult<
       retry: 1,
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: (response) => {
-        dispatch({ type: 'CARD/SET_API', payload: response.card });
+        dispatch({ type: 'CARD/SET', payload: response.card });
       },
     },
   );

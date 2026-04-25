@@ -18,7 +18,7 @@ export function useCloseCard(): MutationResult<CloseRequest, void> {
       retry: 0,
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: () => {
-        dispatch({ type: 'CARD/CLEAR_API' });
+        dispatch({ type: 'CARD/CLEAR' });
       },
     },
   );

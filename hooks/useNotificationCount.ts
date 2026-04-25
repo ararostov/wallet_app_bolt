@@ -31,7 +31,7 @@ export function useNotificationCount(
 ): UseNotificationCountResult {
   const { enabled = true, intervalMs = DEFAULT_INTERVAL_MS } = options;
   const { state, dispatch } = useWallet();
-  const [loading, setLoading] = useState(enabled && state.unreadNotificationsCountApi === null);
+  const [loading, setLoading] = useState(enabled && state.unreadNotificationsCount === null);
   const [error, setError] = useState<Error | null>(null);
   const mountedRef = useRef(true);
 
@@ -47,7 +47,7 @@ export function useNotificationCount(
       const result = await notificationsApi.getCount();
       if (!mountedRef.current) return;
       dispatch({
-        type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API',
+        type: 'NOTIFICATIONS/SET_UNREAD_COUNT',
         payload: result.unreadCount,
       });
       setError(null);
@@ -72,7 +72,7 @@ export function useNotificationCount(
   }, [enabled, intervalMs, refresh]);
 
   return {
-    unreadCount: state.unreadNotificationsCountApi,
+    unreadCount: state.unreadNotificationsCount,
     loading,
     error,
     refresh,

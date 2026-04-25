@@ -53,8 +53,6 @@ export interface PasswordChangedResponse {
 // --- Consents --------------------------------------------------------------
 
 // Profile-domain consent (legal-document summary + per-customer acceptance).
-// Note: distinct from the local mock-driven `Consent` shape in types/index.ts;
-// kept under a different name to avoid breaking other screens.
 export interface ProfileConsent {
   id: number;
   type: string;

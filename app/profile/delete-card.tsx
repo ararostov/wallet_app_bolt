@@ -53,8 +53,8 @@ export default function DeleteCardScreen() {
   const { colors } = useTheme();
   const closeCard = useCloseCard();
 
-  const card = fullCard(state.cardApi);
-  const balance = state.walletApi?.balance;
+  const card = fullCard(state.card);
+  const balance = state.wallet?.balance;
   const balanceLabel = balance
     ? formatMoney(balance.amountMinor, balance.currency)
     : null;

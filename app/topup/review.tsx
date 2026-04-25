@@ -78,7 +78,7 @@ export default function TopupReviewScreen() {
     const n = Number(raw);
     return Number.isFinite(n) ? Math.floor(n) : 0;
   }, [params.amountMinor]);
-  const currency = params.currency ?? state.walletApi?.currency ?? 'GBP';
+  const currency = params.currency ?? state.wallet?.currency ?? 'GBP';
   const paymentMethodId = params.paymentMethodId ?? '';
 
   // Idempotency-Key — rotated whenever the logical request changes
@@ -111,26 +111,25 @@ export default function TopupReviewScreen() {
   }, []);
 
   const selectedMethod = useMemo<ApiPaymentMethod | undefined>(() => {
-    const list = state.paymentMethodsApi ?? [];
+    const list = state.paymentMethods ?? [];
     return list.find((m) => m.id === paymentMethodId);
-  }, [state.paymentMethodsApi, paymentMethodId]);
+  }, [state.paymentMethods, paymentMethodId]);
 
   // Optimistic preview values. Cashback is best-effort — backend has the
   // authoritative rate. Skip the row entirely when we don't know the rate.
-  const cashbackBps = state.tierApi?.currentCashbackRateBps ?? null;
+  const cashbackBps = state.tierSummary?.currentCashbackRateBps ?? null;
   const cashbackMinor =
     cashbackBps !== null
       ? Math.floor((amountMinor * cashbackBps) / 10000)
       : null;
 
-  const isBonusPending =
-    state.wallet.bonusState === 'pending' || state.wallet.bonusState === 'progress';
-  const bonusTargetMinor = state.wallet.topUpTarget * 100;
-  const bonusAmountMinor = state.wallet.bonusAmount * 100;
-  const willUnlockBonus = isBonusPending && amountMinor >= bonusTargetMinor;
-  const bonusMinor = willUnlockBonus ? bonusAmountMinor : 0;
+  // TODO(tech-debt §2.9): wire bonus rule from /wallet/state when backend
+  // starts returning `bonusRule`. Until then we don't preview a bonus —
+  // the legacy mock-shape signal is gone and there is no API substitute.
+  const willUnlockBonus = false;
+  const bonusMinor = 0;
 
-  const currentBalanceMinor = state.walletApi?.balance.amountMinor ?? null;
+  const currentBalanceMinor = state.wallet?.balance.amountMinor ?? null;
   const newBalanceMinor =
     currentBalanceMinor !== null
       ? currentBalanceMinor + amountMinor + bonusMinor

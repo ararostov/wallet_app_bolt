@@ -45,7 +45,7 @@ export function usePaymentMethods(
   useEffect(() => {
     if (!query.data) return;
     dispatch({
-      type: 'PAYMENT_METHODS/SET_API',
+      type: 'PAYMENT_METHODS/SET',
       payload: query.data.paymentMethods,
     });
   }, [query.data, dispatch]);

@@ -66,7 +66,7 @@ export function useClaimReward(): UseClaimRewardResult {
             setLoading(false);
 
             // Mirror the post-claim reward into the rewards slice.
-            dispatch({ type: 'REWARDS/UPSERT_API', payload: result.reward });
+            dispatch({ type: 'REWARDS/UPSERT', payload: result.reward });
 
             // Refresh wallet balance authoritatively (idempotent replays
             // surface a stale snapshot — see spec §6.4).

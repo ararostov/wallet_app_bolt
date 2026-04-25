@@ -75,14 +75,14 @@ export function useNotifications(
             const fresh = items.filter((n) => !known.has(n.id));
             const merged = [...prev, ...fresh];
             dispatch({
-              type: 'NOTIFICATIONS/APPEND_API',
+              type: 'NOTIFICATIONS/APPEND',
               payload: { items: fresh },
             });
             return merged;
           });
         } else {
           setData(items);
-          dispatch({ type: 'NOTIFICATIONS/SET_API', payload: { items } });
+          dispatch({ type: 'NOTIFICATIONS/SET', payload: { items } });
         }
         setCursor(nextCursor);
         setHasMore(more);

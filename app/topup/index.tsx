@@ -1,6 +1,6 @@
 // Top-up amount entry — spec 05-topup §4.1.
 //
-// Reads payment methods from `state.paymentMethodsApi` (spec 04) and falls
+// Reads payment methods from `state.paymentMethods` (spec 04) and falls
 // back to the legacy mock slice for screens that haven't migrated yet. No
 // write-ops on this screen; it just collects amount + paymentMethodId and
 // hands them to /topup/review.
@@ -73,14 +73,14 @@ export default function TopupScreen() {
   const { state } = useWallet();
   const { colors, isDark } = useTheme();
 
-  // Hydrate paymentMethodsApi via /payment-methods on mount; refetch-on-focus
+  // Hydrate state.paymentMethods via /payment-methods on mount; refetch-on-focus
   // is handled inside the hook.
   const paymentMethodsQuery = usePaymentMethods();
 
   const activeMethods = useMemo<ApiPaymentMethod[]>(() => {
-    const list = state.paymentMethodsApi ?? [];
+    const list = state.paymentMethods ?? [];
     return list.filter((m) => m.status === 'active');
-  }, [state.paymentMethodsApi]);
+  }, [state.paymentMethods]);
 
   const defaultMethodId = useMemo<string | null>(() => {
     const def = activeMethods.find((m) => m.isDefault);
@@ -107,7 +107,7 @@ export default function TopupScreen() {
     }
   }, [defaultMethodId, activeMethods, selectedMethodId]);
 
-  const currency = state.walletApi?.currency ?? 'GBP';
+  const currency = state.wallet?.currency ?? 'GBP';
 
   // Derived amount in minor units. Custom input wins when present; otherwise
   // the chip value, otherwise 0.
@@ -139,11 +139,13 @@ export default function TopupScreen() {
     [activeMethods, selectedMethodId],
   );
 
-  const isBonusPending =
-    state.wallet.bonusState === 'pending' || state.wallet.bonusState === 'progress';
-  const bonusTargetMinor = state.wallet.topUpTarget * 100;
-  const bonusAmountMinor = state.wallet.bonusAmount * 100;
-  const willUnlockBonus = isBonusPending && amountMinor >= bonusTargetMinor;
+  // TODO(tech-debt §2.9): wire bonus rule from /wallet/state when backend
+  // starts returning `bonusRule`. Until then we don't show the bonus banner /
+  // chip — the legacy mock-shape signal is gone and there is no API substitute.
+  const isBonusPending = false;
+  const bonusTargetMinor = 0;
+  const bonusAmountMinor = 0;
+  const willUnlockBonus = false;
 
   const canContinue =
     validationError === null &&
@@ -292,7 +294,7 @@ export default function TopupScreen() {
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
           Payment method
         </Text>
-        {paymentMethodsQuery.loading && !state.paymentMethodsApi ? (
+        {paymentMethodsQuery.loading && !state.paymentMethods ? (
           <View
             style={[
               styles.methodSelector,

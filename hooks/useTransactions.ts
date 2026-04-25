@@ -77,7 +77,7 @@ export function useTransactions(
             const fresh = items.filter((t) => !known.has(t.id));
             const merged = [...prev, ...fresh];
             dispatch({
-              type: 'TRANSACTIONS/APPEND_API',
+              type: 'TRANSACTIONS/APPEND',
               payload: { items: fresh },
             });
             return merged;
@@ -85,7 +85,7 @@ export function useTransactions(
         } else {
           setData(items);
           dispatch({
-            type: 'TRANSACTIONS/SET_API',
+            type: 'TRANSACTIONS/SET',
             payload: { items },
           });
         }

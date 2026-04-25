@@ -21,7 +21,7 @@ export function useNotificationSettings(
   const { enabled = true } = options;
   const { state, dispatch } = useWallet();
   const [loading, setLoading] = useState<boolean>(
-    enabled && state.notificationSettingsApi === null,
+    enabled && state.notificationSettings === null,
   );
   const [error, setError] = useState<Error | null>(null);
 
@@ -29,7 +29,7 @@ export function useNotificationSettings(
     setLoading(true);
     try {
       const settings = await notificationsApi.getSettings();
-      dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS_API', payload: settings });
+      dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS', payload: settings });
       setError(null);
     } catch (e) {
       logError(e, { where: 'useNotificationSettings' });
@@ -45,7 +45,7 @@ export function useNotificationSettings(
   }, [enabled, refresh]);
 
   return {
-    data: state.notificationSettingsApi,
+    data: state.notificationSettings,
     loading,
     error,
     refresh,

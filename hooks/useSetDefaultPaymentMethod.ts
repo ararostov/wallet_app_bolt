@@ -27,11 +27,11 @@ export function useSetDefaultPaymentMethod(): UseSetDefaultPaymentMethodResult {
 
   const setDefault = useCallback(
     async (id: string): Promise<PaymentMethodEnvelopeResponse> => {
-      const previous: PaymentMethod[] | null = state.paymentMethodsApi
-        ? [...state.paymentMethodsApi]
+      const previous: PaymentMethod[] | null = state.paymentMethods
+        ? [...state.paymentMethods]
         : null;
 
-      dispatch({ type: 'PAYMENT_METHODS/SET_DEFAULT_API', payload: { id } });
+      dispatch({ type: 'PAYMENT_METHODS/SET_DEFAULT', payload: { id } });
 
       try {
         const response = await paymentMethodsApi.setDefault(
@@ -39,7 +39,7 @@ export function useSetDefaultPaymentMethod(): UseSetDefaultPaymentMethodResult {
           newIdempotencyKey(),
         );
         dispatch({
-          type: 'PAYMENT_METHODS/UPSERT_API',
+          type: 'PAYMENT_METHODS/UPSERT',
           payload: response.paymentMethod,
         });
         invalidateQuery(PAYMENT_METHODS_QUERY_KEY);
@@ -47,12 +47,12 @@ export function useSetDefaultPaymentMethod(): UseSetDefaultPaymentMethodResult {
       } catch (e) {
         logError(e, { where: 'useSetDefaultPaymentMethod', id });
         if (previous) {
-          dispatch({ type: 'PAYMENT_METHODS/SET_API', payload: previous });
+          dispatch({ type: 'PAYMENT_METHODS/SET', payload: previous });
         }
         throw e;
       }
     },
-    [state.paymentMethodsApi, dispatch],
+    [state.paymentMethods, dispatch],
   );
 
   return { setDefault };

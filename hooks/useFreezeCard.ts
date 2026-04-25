@@ -23,9 +23,9 @@ export function useFreezeCard(): MutationResult<FreezeRequest, CardEnvelope> {
       // Snapshot before the optimistic flip — captured here so each call
       // gets a fresh reference (the closure over state is stable per render
       // but mutation may run later).
-      const snapshot = state.cardApi;
+      const snapshot = state.card;
       dispatch({
-        type: 'CARD/UPDATE_API_STATUS',
+        type: 'CARD/UPDATE_STATUS',
         payload: {
           lifecycleStatus: 'frozen',
           status: 'frozen',
@@ -37,7 +37,7 @@ export function useFreezeCard(): MutationResult<FreezeRequest, CardEnvelope> {
       } catch (e) {
         // Rollback by writing the prior snapshot back.
         dispatch({
-          type: 'CARD/SET_API',
+          type: 'CARD/SET',
           payload:
             snapshot && 'lifecycleStatus' in snapshot
               ? (snapshot as Card)
@@ -50,7 +50,7 @@ export function useFreezeCard(): MutationResult<FreezeRequest, CardEnvelope> {
       retry: 1,
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: (response) => {
-        dispatch({ type: 'CARD/SET_API', payload: response.card });
+        dispatch({ type: 'CARD/SET', payload: response.card });
       },
     },
   );
