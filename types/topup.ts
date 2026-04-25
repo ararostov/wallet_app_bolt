@@ -34,9 +34,15 @@ export type TopupFailureCategory =
   | 'fraud'
   | 'unknown';
 
-// PSP-native action payload (Adyen Drop-in `handleAction`). Opaque to the
-// mobile client in the MVP — we only handle `redirectUrl` flows.
-export type TopupProviderAction = Record<string, unknown>;
+// PSP-native action payload. Per tech-debt §2.2, TrueLayer Open Banking is
+// the sole PSP and the only action type backend emits is `redirect`. We
+// keep the shape opaque (`Record<string, unknown>`) because the mobile
+// client only ever drives the redirect via `redirectUrl` — the action
+// payload itself is reserved for future SDK-driven flows.
+export interface TopupProviderAction {
+  type: 'redirect';
+  [key: string]: unknown;
+}
 
 // --- POST /wallet/topup -----------------------------------------------------
 

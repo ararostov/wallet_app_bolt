@@ -52,6 +52,12 @@ export type ApiTransactionRecord = TransactionRecord;
 
 // --- Payment-method snapshot embedded in detail ----------------------------
 
+// TrueLayer Open Banking is the sole PSP for new top-ups (tech-debt §2.2).
+// Legacy `adyen_*` channel values may still appear on historical transaction
+// records created when Adyen was live; we keep them on the read-side union
+// as a dead-but-tolerated literal to preserve display of past data.
+// TODO(tech-debt §2.2): drop the `adyen_*` literals once OpenAPI prunes
+// them and backend confirms no historical data carries those channel values.
 export type TransactionPaymentMethodChannel =
   | 'adyen_card'
   | 'adyen_apple_pay'

@@ -2,12 +2,18 @@
 // and OpenAPI components/schemas/payment-method.yaml. Wire shapes are
 // camelCase, null-preserving (every optional field is always present, even
 // when set to null).
+//
+// PSP scope: TrueLayer Open Banking is the sole top-up PSP. Card-channel
+// (`adyen_*`) literals were removed per tech-debt §2.2. OpenAPI may still
+// list legacy `adyen_*` enum members until backend prunes them — those
+// values are dead on read (no new methods are created with them) and will
+// not surface in the mobile app.
+//
+// `PaymentMethodType` retains `scheme | apple_pay | google_pay` so legacy
+// stored methods (created when Adyen was live) can still be displayed for
+// existing customers; only `open_banking` is creatable going forward.
 
-export type PaymentMethodChannel =
-  | 'adyen_card'
-  | 'adyen_apple_pay'
-  | 'adyen_google_pay'
-  | 'truelayer_open_banking';
+export type PaymentMethodChannel = 'truelayer_open_banking';
 
 export type PaymentMethodType =
   | 'scheme'
@@ -17,6 +23,9 @@ export type PaymentMethodType =
 
 export type PaymentMethodStatus = 'active' | 'disabled' | 'expired' | 'archived';
 
+// TODO(tech-debt §2.2): backend may still return `adyen` for legacy stored
+// methods until OpenAPI is pruned. Keep the literal here for read-time
+// display; new methods created via the mobile app are always `truelayer`.
 export type PaymentMethodProvider =
   | 'adyen'
   | 'truelayer'
@@ -67,7 +76,9 @@ export interface PaymentMethodListResponse {
   defaultPaymentMethodId: string | null;
 }
 
-// POST /payment-methods request body. Strictly excludes raw card fields.
+// POST /payment-methods request body. Strictly excludes raw card/banking
+// credentials — only opaque tokens returned by TrueLayer's hosted consent
+// page reach our backend.
 export interface CreatePaymentMethodRequest {
   channel: PaymentMethodChannel;
   pspToken: string;

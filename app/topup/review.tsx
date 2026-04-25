@@ -173,12 +173,14 @@ export default function TopupReviewScreen() {
 
       case 'action_required': {
         if (!response.redirectUrl) {
-          // SDK-only flows (Adyen native Drop-in) are post-MVP — see spec
-          // §11 open question 3. Surface a recoverable error.
+          // TrueLayer Open Banking always returns a redirect URL for the
+          // bank consent flow (tech-debt §2.2). Reaching this branch means
+          // backend emitted action_required without a URL — recoverable,
+          // ask the customer to retry.
           setInlineError({
             code: 'ACTION_REQUIRED_NO_REDIRECT',
             message:
-              'This payment method requires an action we do not yet support. Please pick another method.',
+              'We could not start the bank consent page. Please try again.',
           });
           void Haptics.notificationAsync(
             Haptics.NotificationFeedbackType.Warning,

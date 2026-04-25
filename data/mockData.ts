@@ -203,33 +203,15 @@ export const MOCK_REWARDS: Reward[] = [
 
 // MOCK_NOTIFICATIONS removed — inbox is now fetched from /notifications (spec 09).
 
+// Legacy mock-shape payment methods. TrueLayer Open Banking is the sole
+// PSP for new methods (tech-debt §2.2), so card / Apple Pay / Google Pay
+// entries have been removed. Bank-transfer mock kept as fallback for the
+// auto-reload picker before `paymentMethodsApi` is hydrated.
 export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
   {
     id: 'pm_001',
-    type: 'apple_pay',
-    label: 'Apple Pay',
-    isDefault: false,
-  },
-  {
-    id: 'pm_002',
-    type: 'card',
-    label: 'Visa Debit',
-    last4: '4242',
-    brand: 'visa',
-    isDefault: true,
-  },
-  {
-    id: 'pm_003',
-    type: 'card',
-    label: 'Mastercard',
-    last4: '5555',
-    brand: 'mastercard',
-    isDefault: false,
-  },
-  {
-    id: 'pm_004',
     type: 'bank_transfer',
     label: 'Bank Transfer',
-    isDefault: false,
+    isDefault: true,
   },
 ];
