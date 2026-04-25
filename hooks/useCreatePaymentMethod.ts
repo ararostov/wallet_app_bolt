@@ -11,6 +11,7 @@ import type {
   PaymentMethodEnvelopeResponse,
 } from '@/types/paymentMethods';
 import { paymentMethodsApi } from '@/utils/api/paymentMethods';
+import { haptics } from '@/utils/haptics';
 import { useMutation, type MutationResult } from './useMutation';
 import { PAYMENT_METHODS_QUERY_KEY } from './usePaymentMethods';
 
@@ -34,6 +35,7 @@ export function useCreatePaymentMethod(
           type: 'PAYMENT_METHODS/UPSERT',
           payload: response.paymentMethod,
         });
+        haptics.success();
         options.onSuccess?.(response);
       },
       onError: (error) => options.onError?.(error),

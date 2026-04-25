@@ -8,6 +8,7 @@
 import { useWallet } from '@/context/WalletContext';
 import type { Card, UnfreezeRequest } from '@/types/card';
 import { cardApi } from '@/utils/api/card';
+import { haptics } from '@/utils/haptics';
 import { CARD_QUERY_KEY } from './useCard';
 import { useMutation, type MutationResult } from './useMutation';
 
@@ -49,6 +50,9 @@ export function useUnfreezeCard(): MutationResult<UnfreezeRequest, CardEnvelope>
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: (response) => {
         dispatch({ type: 'CARD/SET', payload: response.card });
+        // Spec 4.5 deems unfreeze a "warning" haptic — fits the destructive
+        // theme (rolling back a safety lock) and matches §B.1 guidelines.
+        haptics.warning();
       },
     },
   );

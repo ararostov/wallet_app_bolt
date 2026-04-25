@@ -13,6 +13,7 @@ import type {
   PaymentMethodArchivedResponse,
 } from '@/types/paymentMethods';
 import { paymentMethodsApi } from '@/utils/api/paymentMethods';
+import { haptics } from '@/utils/haptics';
 import { newIdempotencyKey } from '@/utils/idempotency';
 import { logError } from '@/utils/logger';
 import { invalidateQuery } from './useQuery';
@@ -45,6 +46,7 @@ export function useArchivePaymentMethod(): UseArchivePaymentMethodResult {
           });
         }
         invalidateQuery(PAYMENT_METHODS_QUERY_KEY);
+        haptics.success();
         return response;
       } catch (e) {
         logError(e, { where: 'useArchivePaymentMethod', id });

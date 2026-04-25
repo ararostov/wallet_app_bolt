@@ -13,6 +13,7 @@ import type {
   UpdateNotificationSettingsRequest,
 } from '@/types/notifications';
 import { notificationsApi } from '@/utils/api/notifications';
+import { haptics } from '@/utils/haptics';
 import { newIdempotencyKey } from '@/utils/idempotency';
 import { logError } from '@/utils/logger';
 
@@ -90,6 +91,7 @@ export function useUpdateNotificationSettings(): UseUpdateNotificationSettingsRe
         dispatch({ type: 'NOTIFICATIONS/SET_SETTINGS', payload: result });
         // Rotate the key so the next save uses a fresh one.
         idempotencyKeyRef.current = newIdempotencyKey();
+        haptics.success();
         return result;
       } catch (e) {
         if (previous) {

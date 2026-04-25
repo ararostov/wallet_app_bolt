@@ -6,6 +6,7 @@
 import { useWallet } from '@/context/WalletContext';
 import type { CloseRequest } from '@/types/card';
 import { cardApi } from '@/utils/api/card';
+import { haptics } from '@/utils/haptics';
 import { CARD_QUERY_KEY } from './useCard';
 import { useMutation, type MutationResult } from './useMutation';
 
@@ -19,6 +20,8 @@ export function useCloseCard(): MutationResult<CloseRequest, void> {
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: () => {
         dispatch({ type: 'CARD/CLEAR' });
+        // Destructive — surface a warning haptic per spec 4.5 §B.1.
+        haptics.warning();
       },
     },
   );

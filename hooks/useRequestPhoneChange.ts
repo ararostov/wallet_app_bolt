@@ -4,6 +4,7 @@ import { useRef } from 'react';
 
 import { useWallet } from '@/context/WalletContext';
 import { profileApi } from '@/utils/api/profile';
+import { haptics } from '@/utils/haptics';
 import { newIdempotencyKey } from '@/utils/idempotency';
 import { useMutation } from './useMutation';
 import type {
@@ -35,6 +36,9 @@ export function useRequestPhoneChange() {
           requestedAt: new Date().toISOString(),
         },
       });
+      // OTP-sent confirmation — light tick (Success fires later via
+      // useVerifyPhoneChange + the OTP screen's toast).
+      haptics.light();
     },
   });
 

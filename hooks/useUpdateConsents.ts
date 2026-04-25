@@ -4,6 +4,7 @@
 
 import { useWallet } from '@/context/WalletContext';
 import { profileApi } from '@/utils/api/profile';
+import { haptics } from '@/utils/haptics';
 import { useMutation } from './useMutation';
 import type {
   ConsentsStatusResponse,
@@ -24,6 +25,7 @@ export function useUpdateConsents() {
           payload: { documents: data.documents, marketingOptIn: data.marketingOptIn },
         });
         dispatch({ type: 'UPDATE_USER', payload: { marketingOptIn: data.marketingOptIn } });
+        haptics.success();
       },
     },
   );

@@ -11,6 +11,7 @@ import type {
   ReportTransactionRequest,
 } from '@/types/transactions';
 import { ApiError } from '@/utils/errors';
+import { haptics } from '@/utils/haptics';
 import { logError } from '@/utils/logger';
 import { transactionsApi } from '@/utils/api/transactions';
 import { invalidateQuery } from './useQuery';
@@ -63,6 +64,7 @@ export function useReportTransaction(): UseReportTransactionResult {
             invalidateQuery(`transactions:detail:${vars.transactionId}`);
             invalidateQuery(`transactions:dispute:${vars.transactionId}`);
             dispatch({ type: 'DISPUTES/UPSERT', payload: result });
+            haptics.success();
             return result;
           } catch (e) {
             lastError = e;

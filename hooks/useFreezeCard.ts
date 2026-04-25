@@ -8,6 +8,7 @@
 import { useWallet } from '@/context/WalletContext';
 import type { Card, FreezeRequest } from '@/types/card';
 import { cardApi } from '@/utils/api/card';
+import { haptics } from '@/utils/haptics';
 import { CARD_QUERY_KEY } from './useCard';
 import { useMutation, type MutationResult } from './useMutation';
 
@@ -51,6 +52,7 @@ export function useFreezeCard(): MutationResult<FreezeRequest, CardEnvelope> {
       invalidateKeys: [CARD_QUERY_KEY],
       onSuccess: (response) => {
         dispatch({ type: 'CARD/SET', payload: response.card });
+        haptics.success();
       },
     },
   );

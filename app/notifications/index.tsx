@@ -3,10 +3,9 @@
 // useDeleteNotification. Replaces the mock-driven version.
 //
 // UX matches spec 09 §4.1: filter chips (All / Unread), severity-coloured
-// row icons, unread dot, relative time, swipe-free delete via inline trash
-// button (the project doesn't yet have a Swipeable wrapper component, so
-// the trash button matches the legacy interaction pattern), pull-to-refresh,
-// cursor pagination, header "Mark all read" action.
+// row icons, unread dot, relative time, swipe-to-delete via SwipeableRow
+// (right-action red panel — replaces the legacy inline trash + Alert),
+// pull-to-refresh, cursor pagination, header "Mark all read" action.
 
 import React, { useMemo, useState } from 'react';
 import {
@@ -29,7 +28,6 @@ import {
   Settings,
   Shield,
   Sparkles,
-  Trash2,
   Trophy,
   Wallet,
 } from 'lucide-react-native';
@@ -41,6 +39,7 @@ import { useMarkAllNotificationsRead } from '@/hooks/useMarkAllNotificationsRead
 import { useMarkNotificationRead } from '@/hooks/useMarkNotificationRead';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { useNotifications } from '@/hooks/useNotifications';
+import { SwipeableRow } from '@/components/ui/SwipeableRow';
 import type {
   Notification,
   NotificationIcon,
@@ -112,23 +111,19 @@ export default function NotificationsScreen() {
     }
   };
 
-  const onDeletePress = (n: Notification): void => {
-    Alert.alert('Delete notification?', n.title, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await remove(n.id);
-          } catch (e) {
-            const message =
-              e instanceof ApiError ? mapErrorCode(e.code) ?? e.message : 'Could not delete.';
-            setBannerError(message);
-          }
-        },
-      },
-    ]);
+  // Swipe-to-delete IS the confirm — there is no extra Alert. The mutation
+  // is optimistic and rolls back on server error, so an accidental delete
+  // can be recovered by pull-to-refresh (the rolled-back row reappears).
+  // Soft-delete on the backend means even fully-confirmed deletes can be
+  // restored support-side if a user complains.
+  const onDeleteSwipe = async (n: Notification): Promise<void> => {
+    try {
+      await remove(n.id);
+    } catch (e) {
+      const message =
+        e instanceof ApiError ? mapErrorCode(e.code) ?? e.message : 'Could not delete.';
+      setBannerError(message);
+    }
   };
 
   const onMarkAllPress = (): void => {
@@ -291,56 +286,50 @@ export default function NotificationsScreen() {
             const sev = SEVERITY_COLORS[item.severity] ?? SEVERITY_COLORS.info;
             const unread = item.readAt === null;
             return (
-              <TouchableOpacity
-                accessibilityRole="button"
+              <SwipeableRow
                 accessibilityLabel={`${item.title}. ${item.body}. ${unread ? 'Unread' : 'Read'}`}
-                style={[
-                  styles.notifRow,
-                  {
-                    backgroundColor: colors.surface,
-                    borderBottomColor: colors.borderLight,
-                  },
-                  unread && { backgroundColor: isDark ? colors.surfaceAlt : '#f8faff' },
-                ]}
                 onPress={() => void onRowPress(item)}
+                onDelete={() => void onDeleteSwipe(item)}
               >
-                <View style={[styles.notifIcon, { backgroundColor: sev.bg }]}>
-                  <Icon size={18} color={sev.fg} />
-                </View>
-                <View style={styles.notifContent}>
-                  <View style={styles.notifTitleRow}>
-                    <Text
-                      style={[
-                        styles.notifTitle,
-                        { color: colors.textSecondary },
-                        unread && { fontFamily: 'Inter-SemiBold', color: colors.text },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
-                    {unread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-                  </View>
-                  <Text
-                    style={[styles.notifPreview, { color: colors.textSecondary }]}
-                    numberOfLines={2}
-                  >
-                    {item.body}
-                  </Text>
-                  <Text style={[styles.notifTime, { color: colors.textTertiary }]}>
-                    {relativeTime(item.createdAt)}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Delete notification"
-                  onPress={() => onDeletePress(item)}
-                  style={styles.deleteBtn}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                <View
+                  style={[
+                    styles.notifRow,
+                    {
+                      backgroundColor: colors.surface,
+                      borderBottomColor: colors.borderLight,
+                    },
+                    unread && { backgroundColor: isDark ? colors.surfaceAlt : '#f8faff' },
+                  ]}
                 >
-                  <Trash2 size={16} color={colors.textTertiary} />
-                </TouchableOpacity>
-              </TouchableOpacity>
+                  <View style={[styles.notifIcon, { backgroundColor: sev.bg }]}>
+                    <Icon size={18} color={sev.fg} />
+                  </View>
+                  <View style={styles.notifContent}>
+                    <View style={styles.notifTitleRow}>
+                      <Text
+                        style={[
+                          styles.notifTitle,
+                          { color: colors.textSecondary },
+                          unread && { fontFamily: 'Inter-SemiBold', color: colors.text },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.title}
+                      </Text>
+                      {unread && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                    </View>
+                    <Text
+                      style={[styles.notifPreview, { color: colors.textSecondary }]}
+                      numberOfLines={2}
+                    >
+                      {item.body}
+                    </Text>
+                    <Text style={[styles.notifTime, { color: colors.textTertiary }]}>
+                      {relativeTime(item.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+              </SwipeableRow>
             );
           }}
         />
@@ -415,5 +404,4 @@ const styles = StyleSheet.create({
   unreadDot: { width: 8, height: 8, borderRadius: 4 },
   notifPreview: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
   notifTime: { fontSize: 13, fontFamily: 'Inter-Regular' },
-  deleteBtn: { padding: 4, marginTop: 2 },
 });

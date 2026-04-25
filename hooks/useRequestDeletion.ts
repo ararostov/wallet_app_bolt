@@ -9,6 +9,7 @@ import { useWallet } from '@/context/WalletContext';
 import { profileApi } from '@/utils/api/profile';
 import { TokenStorage } from '@/utils/tokens';
 import { revokePushToken } from '@/utils/push';
+import { haptics } from '@/utils/haptics';
 import { newIdempotencyKey } from '@/utils/idempotency';
 import { logEvent } from '@/utils/logger';
 import { useMutation } from './useMutation';
@@ -32,6 +33,8 @@ export function useRequestDeletion() {
         logEvent('account_deletion_requested', {
           reasonCode: vars.reasonCode ?? null,
         });
+        // Destructive operation — warning haptic per spec 4.5 §B.1.
+        haptics.warning();
         // Backend already revoked all tokens — mirror that locally so the
         // app can't accidentally reuse them.
         revokePushToken().catch(() => undefined);
