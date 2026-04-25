@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacityProps,
   ViewStyle,
-  TextStyle,
 } from 'react-native';
 
 interface ButtonProps extends TouchableOpacityProps {

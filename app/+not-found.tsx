@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 export default function NotFoundScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <>

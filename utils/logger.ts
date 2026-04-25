@@ -51,14 +51,14 @@ function sanitize(value: unknown, depth = 0): unknown {
 
 export function logDebug(message: string, context?: Record<string, unknown>): void {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.log(`[DEBUG] ${message}`, context ? sanitize(context) : '');
   }
 }
 
 export function logError(error: unknown, context?: Record<string, unknown>): void {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.error('[ERROR]', error, context ? sanitize(context) : '');
   }
   // TODO: send to Sentry / Crashlytics in production.
@@ -66,7 +66,7 @@ export function logError(error: unknown, context?: Record<string, unknown>): voi
 
 export function logEvent(name: string, props?: Record<string, unknown>): void {
   if (__DEV__) {
-    // eslint-disable-next-line no-console
+     
     console.log(`[EVENT] ${name}`, props ? sanitize(props) : '');
   }
   // TODO: forward to analytics SDK in production.

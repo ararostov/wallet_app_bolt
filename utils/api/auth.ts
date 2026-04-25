@@ -5,7 +5,6 @@
 import { api } from '../api';
 import type {
   AuthSessionResponse,
-  MeResponse,
   RefreshTokenRequest,
   RefreshTokenResponse,
   RegisterRequest,

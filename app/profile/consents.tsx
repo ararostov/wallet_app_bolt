@@ -52,7 +52,10 @@ export default function ConsentsScreen() {
   const update = useUpdateConsents();
   const [pendingId, setPendingId] = useState<number | null>(null);
 
-  const documents = state.consents ?? data?.documents ?? [];
+  const documents = useMemo(
+    () => state.consents ?? data?.documents ?? [],
+    [state.consents, data?.documents],
+  );
   const marketingOptIn = state.marketingOptIn ?? data?.marketingOptIn ?? false;
 
   const required = useMemo(() => documents.filter((c) => c.mandatory), [documents]);

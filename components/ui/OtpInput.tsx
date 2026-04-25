@@ -36,7 +36,7 @@ export function OtpInput({
   disabled = false,
 }: OtpInputProps) {
   const { colors } = useTheme();
-  const refs = useRef<Array<TextInputType | null>>([]);
+  const refs = useRef<(TextInputType | null)[]>([]);
   const lastReportedRef = useRef<string>('');
 
   const digits = value.padEnd(length, ' ').slice(0, length).split('');

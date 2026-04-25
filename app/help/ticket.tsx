@@ -35,7 +35,7 @@ interface CategoryOption {
 }
 
 // Closed enum from OpenAPI — see help-legal.yaml `SupportTicketCategory`.
-const CATEGORY_OPTIONS: ReadonlyArray<CategoryOption> = [
+const CATEGORY_OPTIONS: readonly CategoryOption[] = [
   { value: 'account', label: 'Account' },
   { value: 'payment', label: 'Payments' },
   { value: 'card', label: 'Card' },

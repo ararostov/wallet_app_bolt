@@ -6,8 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
-  Animated,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -46,7 +44,7 @@ const SLIDES = [
 
 export default function IntroScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 

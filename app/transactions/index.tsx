@@ -38,10 +38,10 @@ import {
 } from '@/utils/format';
 import { mapErrorCode, ApiError } from '@/utils/errors';
 
-const FILTERS: ReadonlyArray<{
+const FILTERS: readonly {
   label: string;
   value: TransactionType | null;
-}> = [
+}[] = [
   { label: 'All', value: null },
   { label: 'Top-ups', value: 'topup' },
   { label: 'Purchases', value: 'purchase' },

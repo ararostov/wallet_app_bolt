@@ -4,7 +4,7 @@ import { AuthEvents } from '../utils/authEvents';
 import { setReferralDeepLinkListener } from '../utils/deepLinks';
 import { SignupDraftStorage } from '../utils/signupDraftStorage';
 import { isOtpWindowExpired, isSignupDraftEmpty } from '../utils/signupDraft';
-import type { AuthChannel, AuthUser, WalletSummary } from '../types/auth';
+import type { AuthChannel, AuthUser, WalletSummary , MoneyAmount } from '../types/auth';
 import type {
   AccountDeletionStatus,
   ContactChangeInProgress,
@@ -22,7 +22,6 @@ import type {
   WalletProvisioningProvider,
   WalletProvisioningStatus,
 } from '../types/card';
-import type { MoneyAmount } from '../types/auth';
 import type { PaymentMethod as ApiPaymentMethod } from '../types/paymentMethods';
 import type {
   DisputeRecord,

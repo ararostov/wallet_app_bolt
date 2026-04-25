@@ -140,7 +140,7 @@ api.interceptors.response.use(
           original.headers = retryHeaders;
         }
         return api(original);
-      } catch (refreshError) {
+      } catch {
         await TokenStorage.clear();
         AuthEvents.emit('logout');
         throw normaliseError(error);

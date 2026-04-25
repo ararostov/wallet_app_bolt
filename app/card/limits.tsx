@@ -89,7 +89,7 @@ export default function CardLimitsScreen() {
     if (initialMonthly !== null) {
       setMonthlyInput(formatMinorAsInput(initialMonthly));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [initialDaily, initialMonthly]);
 
   const isFrozen = card?.lifecycleStatus === 'frozen';

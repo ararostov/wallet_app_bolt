@@ -34,11 +34,11 @@ interface PickedAttachment {
   uri: string;
 }
 
-const REASON_OPTIONS: ReadonlyArray<{
+const REASON_OPTIONS: readonly {
   value: DisputeReason;
   label: string;
   description: string;
-}> = [
+}[] = [
   {
     value: 'unauthorized',
     label: "I didn't make this transaction",
@@ -75,7 +75,7 @@ const MIN_DESC = 20;
 const MAX_DESC = 2000;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
-const ALLOWED_CONTENT_TYPES: ReadonlyArray<DisputeAttachmentContentType> = [
+const ALLOWED_CONTENT_TYPES: readonly DisputeAttachmentContentType[] = [
   'image/jpeg',
   'image/png',
   'image/heic',

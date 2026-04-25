@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 
 export default function InviteWelcomeScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={styles.container}>

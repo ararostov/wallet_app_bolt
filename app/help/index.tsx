@@ -5,7 +5,7 @@
 // link `walletapp://help?category=payments` arrives via `useLocalSearchParams`
 // and pre-seeds the filter before the first fetch.
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -103,7 +103,7 @@ export default function HelpScreen() {
   );
 
   // "All" chip + the dynamic categories returned by backend.
-  const chipValues: Array<{ value: string | null; label: string }> = [
+  const chipValues: { value: string | null; label: string }[] = [
     { value: null, label: 'All' },
     ...categories.map((slug) => ({ value: slug, label: formatCategoryLabel(slug) })),
   ];

@@ -251,7 +251,7 @@ export function groupTransactionsByOccurredAt<T extends { occurredAt: string }>(
   // Lazy import via require to avoid pulling date-fns into bundles for
   // screens that don't use this helper. date-fns is tree-shakeable so the
   // explicit import here is fine in practice.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { isToday, isYesterday, isThisWeek, format } = require('date-fns') as {
     isToday: (d: Date) => boolean;
     isYesterday: (d: Date) => boolean;

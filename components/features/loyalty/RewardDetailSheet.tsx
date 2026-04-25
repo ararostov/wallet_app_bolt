@@ -46,7 +46,7 @@ export function RewardDetailSheet({
   const { colors, isDark } = useTheme();
   const visible = rewardId !== null;
 
-  const { data: reward, loading, error, refetch } = useReward(rewardId);
+  const { data: reward, loading, error } = useReward(rewardId);
   const claim = useClaimReward();
 
   // Reset the claim state when the sheet target changes.

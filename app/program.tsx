@@ -46,7 +46,7 @@ export default function ProgramScreen(): React.ReactElement {
   const [activeTab, setActiveTab] = useState<Tab>('Active');
 
   const perksQuery = usePerks();
-  const perks = perksQuery.data ?? [];
+  const perks = useMemo(() => perksQuery.data ?? [], [perksQuery.data]);
 
   const filtered = useMemo(
     () => perks.filter((p) => categorise(p) === activeTab),
