@@ -1,8 +1,6 @@
-// Signup step 1 — channel (phone/email) + identifier + optional referral code.
-// No API call here; the data lands in signupDraft and the user moves on to
-// /signup/profile. The actual register request goes out from /signup/consents.
+// Login screen — channel + identifier → POST /auth/send-code → /login/otp.
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,48 +13,30 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronRight } from 'lucide-react-native';
+import { ChevronDown } from 'lucide-react-native';
 
 import { useTheme } from '@/context/ThemeContext';
-import { useWallet } from '@/context/WalletContext';
+import { useSendLoginCode } from '@/hooks/useSendLoginCode';
+import { ApiError, mapErrorCode } from '@/utils/errors';
 import { isValidE164, isValidEmail } from '@/utils/validators';
+import { logEvent } from '@/utils/logger';
 
 const COUNTRIES = [
   { flag: '\u{1F1EC}\u{1F1E7}', code: '+44', name: 'GB' },
-  { flag: '\u{1F1FA}\u{1F1F8}', code: '+1', name: 'US' },
-  { flag: '\u{1F1EA}\u{1F1FA}', code: '+33', name: 'EU' },
 ];
 
-const REFERRAL_RE = /^[A-Z0-9-]{6,12}$/;
-
-export default function SignupScreen() {
+export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { state, dispatch } = useWallet();
-  const draft = state.signupDraft;
+  const sendCode = useSendLoginCode();
 
-  const [method, setMethod] = useState<'phone' | 'email'>(draft.method ?? 'phone');
-  const [phoneValue, setPhoneValue] = useState(
-    draft.phoneE164 ? draft.phoneE164.replace(/^\+44/, '') : '',
-  );
-  const [emailValue, setEmailValue] = useState(draft.email ?? '');
-  const [selectedCountry] = useState(COUNTRIES[0]);
-  const [referralExpanded, setReferralExpanded] = useState(
-    Boolean(draft.referralCode),
-  );
-  const [referralCode, setReferralCode] = useState(draft.referralCode ?? '');
+  const [method, setMethod] = useState<'phone' | 'email'>('phone');
+  const [phoneValue, setPhoneValue] = useState('');
+  const [emailValue, setEmailValue] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Re-prefill referral if a deep link arrives mid-screen.
-  useEffect(() => {
-    if (draft.referralCode && draft.referralCode !== referralCode) {
-      setReferralCode(draft.referralCode);
-      setReferralExpanded(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.referralCode]);
-
-  const formatUKPhone = (text: string): string => {
+  const formatUKPhone = (text: string) => {
     const digits = text.replace(/\D/g, '').slice(0, 10);
     if (digits.length <= 4) return digits;
     if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
@@ -69,50 +49,9 @@ export default function SignupScreen() {
     setPhoneValue(formatUKPhone(digits));
   };
 
-  const buildPhoneE164 = (raw: string): string => {
-    const digits = raw.replace(/\D/g, '');
-    return digits.length > 0 ? `${selectedCountry.code}${digits}` : '';
-  };
-
-  const validate = (): { ok: boolean; phoneE164: string | null; email: string | null } => {
-    const e: Record<string, string> = {};
-    let phoneE164: string | null = null;
-    let email: string | null = null;
-
-    if (method === 'phone') {
-      const candidate = buildPhoneE164(phoneValue);
-      if (!isValidE164(candidate)) {
-        e.phone = 'Enter a valid phone number';
-      } else {
-        phoneE164 = candidate;
-      }
-    } else if (!isValidEmail(emailValue.trim())) {
-      e.email = 'Enter a valid email address';
-    } else {
-      email = emailValue.trim();
-    }
-
-    if (referralCode.trim() && !REFERRAL_RE.test(referralCode.trim())) {
-      e.referral = 'Referral code looks invalid';
-    }
-
-    setErrors(e);
-    return { ok: Object.keys(e).length === 0, phoneE164, email };
-  };
-
-  const handleContinue = () => {
-    const { ok, phoneE164, email } = validate();
-    if (!ok) return;
-    dispatch({
-      type: 'AUTH/UPDATE_DRAFT',
-      payload: {
-        method,
-        phoneE164,
-        email,
-        referralCode: referralCode.trim() || null,
-      },
-    });
-    router.push('/(onboarding)/signup/profile');
+  const buildPhone = () => {
+    const digits = phoneValue.replace(/\D/g, '');
+    return digits ? `+44${digits}` : '';
   };
 
   const isValid =
@@ -120,21 +59,46 @@ export default function SignupScreen() {
       ? phoneValue.replace(/\D/g, '').length >= 7
       : isValidEmail(emailValue.trim());
 
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    const e: Record<string, string> = {};
+    if (method === 'phone' && !isValidE164(buildPhone())) e.phone = 'Enter a valid phone';
+    if (method === 'email' && !isValidEmail(emailValue.trim())) e.email = 'Enter a valid email';
+    setErrors(e);
+    if (Object.keys(e).length) return;
+
+    logEvent('login_started', { method });
+    try {
+      await sendCode.mutate(
+        method === 'phone' ? { phoneE164: buildPhone() } : { email: emailValue.trim() },
+      );
+      router.push('/(onboarding)/login/otp');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setSubmitError(mapErrorCode(err.code) ?? err.message);
+        return;
+      }
+      setSubmitError('Network error. Please check your connection and try again.');
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
-
-          <Text style={[styles.title, { color: colors.text }]}>Create your Wallet Account</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Sign up to start earning cashback with Tesco Wallet.
+            Sign in to your Wallet account.
           </Text>
+
+          {submitError && (
+            <View style={[styles.errorBanner, { backgroundColor: colors.redLight, borderColor: colors.red }]}>
+              <Text style={[styles.errorBannerText, { color: colors.red }]}>{submitError}</Text>
+            </View>
+          )}
 
           <View style={[styles.toggle, { backgroundColor: colors.surfaceAlt }]}>
             {(['phone', 'email'] as const).map((m) => (
@@ -142,10 +106,7 @@ export default function SignupScreen() {
                 key={m}
                 style={[
                   styles.toggleBtn,
-                  method === m && [
-                    styles.toggleBtnActive,
-                    { backgroundColor: colors.surface, shadowColor: colors.shadowColor },
-                  ],
+                  method === m && [styles.toggleBtnActive, { backgroundColor: colors.surface }],
                 ]}
                 onPress={() => setMethod(m)}
               >
@@ -171,10 +132,8 @@ export default function SignupScreen() {
                     { backgroundColor: colors.background, borderColor: colors.border },
                   ]}
                 >
-                  <Text style={styles.flag}>{selectedCountry.flag}</Text>
-                  <Text style={[styles.countryCode, { color: colors.text }]}>
-                    {selectedCountry.code}
-                  </Text>
+                  <Text style={styles.flag}>{COUNTRIES[0].flag}</Text>
+                  <Text style={[styles.countryCode, { color: colors.text }]}>{COUNTRIES[0].code}</Text>
                   <ChevronDown size={14} color={colors.textSecondary} />
                 </View>
                 <TextInput
@@ -222,61 +181,27 @@ export default function SignupScreen() {
           )}
 
           <TouchableOpacity
-            style={styles.referralToggle}
-            onPress={() => setReferralExpanded((v) => !v)}
-          >
-            <Text style={[styles.referralToggleText, { color: colors.primary }]}>
-              Have a referral code?
-            </Text>
-            <ChevronRight
-              size={16}
-              color={colors.primary}
-              style={{ transform: [{ rotate: referralExpanded ? '90deg' : '0deg' }] }}
-            />
-          </TouchableOpacity>
-
-          {referralExpanded && (
-            <View>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.referralInput,
-                  {
-                    backgroundColor: colors.background,
-                    borderColor: errors.referral ? colors.red : colors.border,
-                    color: colors.text,
-                  },
-                ]}
-                placeholder="Enter referral code"
-                placeholderTextColor={colors.textTertiary}
-                autoCapitalize="characters"
-                value={referralCode}
-                onChangeText={(v) => setReferralCode(v.toUpperCase())}
-                maxLength={12}
-              />
-              {errors.referral && (
-                <Text style={[styles.errorText, { color: colors.red }]}>{errors.referral}</Text>
-              )}
-            </View>
-          )}
-
-          <TouchableOpacity
             style={[
               styles.primaryBtn,
               { backgroundColor: colors.primary },
-              !isValid && styles.primaryBtnDisabled,
+              (!isValid || sendCode.loading) && styles.primaryBtnDisabled,
             ]}
-            onPress={handleContinue}
-            disabled={!isValid}
+            onPress={handleSubmit}
+            disabled={!isValid || sendCode.loading}
           >
-            <Text style={styles.primaryBtnText}>Continue</Text>
+            <Text style={styles.primaryBtnText}>
+              {sendCode.loading ? 'Sending…' : 'Send code'}
+            </Text>
           </TouchableOpacity>
 
-          <Text style={[styles.legal, { color: colors.textTertiary }]}>
-            By continuing you agree to our{' '}
-            <Text style={[styles.legalLink, { color: colors.primary }]}>Terms</Text> and{' '}
-            <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
-          </Text>
+          <TouchableOpacity
+            style={styles.secondary}
+            onPress={() => router.replace('/(onboarding)/signup')}
+          >
+            <Text style={[styles.secondaryText, { color: colors.primary }]}>
+              Don&apos;t have an account? Sign up
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -290,12 +215,14 @@ const styles = StyleSheet.create({
   backBtn: { marginBottom: 24 },
   backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
   title: { fontSize: 30, fontFamily: 'Inter-Bold', marginBottom: 8, letterSpacing: -0.5 },
-  subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 28, lineHeight: 22 },
+  subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 24, lineHeight: 22 },
+  errorBanner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16 },
+  errorBannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   toggle: { flexDirection: 'row', borderRadius: 12, padding: 4, marginBottom: 20 },
   toggleBtn: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   toggleBtnActive: { shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   toggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
-  phoneRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  phoneRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
   countryPicker: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -322,23 +249,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 17,
-    marginBottom: 8,
     fontFamily: 'Inter-Regular',
   },
-  referralToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 16,
-    marginBottom: 12,
-    alignSelf: 'flex-start',
-  },
-  referralToggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
-  referralInput: { marginTop: 0 },
-  errorText: { fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 4 },
+  errorText: { fontSize: 14, fontFamily: 'Inter-Regular', marginTop: 4 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
-  legal: { fontSize: 14, textAlign: 'center', lineHeight: 18, marginTop: 24 },
-  legalLink: {},
+  secondary: { alignItems: 'center', paddingVertical: 16 },
+  secondaryText: { fontSize: 16, fontFamily: 'Inter-Medium' },
 });

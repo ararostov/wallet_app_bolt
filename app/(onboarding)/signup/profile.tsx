@@ -1,75 +1,117 @@
-import React, { useState, useRef, useCallback } from 'react';
+// Signup step 2 — first/last name, DOB (native picker, age >= 18) and the
+// secondary identifier (email if user signed up with phone, vice versa).
+// No API call here — everything goes into signupDraft.
+
+import React, { useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  View,
   type TextInput as TextInputType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Calendar } from 'lucide-react-native';
+
 import { useTheme } from '@/context/ThemeContext';
+import { useWallet } from '@/context/WalletContext';
+import { ProgressStepper } from '@/components/ui/ProgressStepper';
+import { isValidDob18plus, isValidE164, isValidEmail } from '@/utils/validators';
+import { formatDate } from '@/utils/format';
 
-function Stepper({ current, total }: { current: number; total: number }) {
-  const { colors } = useTheme();
-  return (
-    <View style={stepStyles.row}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View key={i} style={[stepStyles.step, { backgroundColor: colors.border }, i < current && { backgroundColor: colors.primary }]} />
-      ))}
-      <Text style={[stepStyles.label, { color: colors.textTertiary }]}>{current} of {total}</Text>
-    </View>
-  );
-}
-
-const stepStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 28 },
-  step: { flex: 1, height: 4, borderRadius: 2 },
-  label: { fontSize: 15, fontFamily: 'Inter-Regular', marginLeft: 4 },
-});
-
-function formatDob(raw: string): string {
-  const digits = raw.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)} / ${digits.slice(2)}`;
-  return `${digits.slice(0, 2)} / ${digits.slice(2, 4)} / ${digits.slice(4)}`;
-}
-
-function dobRawDigits(formatted: string): string {
-  return formatted.replace(/\D/g, '');
+function isoFromDate(d: Date): string {
+  const yyyy = d.getFullYear().toString().padStart(4, '0');
+  const mm = (d.getMonth() + 1).toString().padStart(2, '0');
+  const dd = d.getDate().toString().padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [dob, setDob] = useState('');
-  const [email, setEmail] = useState('');
+  const { colors } = useTheme();
+  const { state, dispatch } = useWallet();
+  const draft = state.signupDraft;
+
+  const [firstName, setFirstName] = useState(draft.firstName ?? '');
+  const [lastName, setLastName] = useState(draft.lastName ?? '');
+  const [dob, setDob] = useState<Date | null>(
+    draft.dateOfBirth ? new Date(draft.dateOfBirth) : null,
+  );
+  const [secondary, setSecondary] = useState(
+    draft.method === 'phone' ? (draft.email ?? '') : (draft.phoneE164 ?? ''),
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const lastNameRef = useRef<TextInputType>(null);
-  const dobRef = useRef<TextInputType>(null);
-  const emailRef = useRef<TextInputType>(null);
+  const secondaryRef = useRef<TextInputType>(null);
 
-  const validate = () => {
+  const maxDob = useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d;
+  }, []);
+  const minDob = useMemo(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 120);
+    return d;
+  }, []);
+
+  const validate = (): boolean => {
     const e: Record<string, string> = {};
-    if (!firstName.trim()) e.firstName = 'Required';
-    if (!lastName.trim()) e.lastName = 'Required';
-    if (!dob.trim()) e.dob = 'Required';
-    if (!email.trim()) e.email = 'Required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = 'Invalid email';
-    return e;
+    if (!firstName.trim() || firstName.trim().length > 60) e.firstName = 'Required';
+    if (!lastName.trim() || lastName.trim().length > 60) e.lastName = 'Required';
+    if (!dob) {
+      e.dob = 'Required';
+    } else if (!isValidDob18plus(isoFromDate(dob))) {
+      e.dob = 'You must be at least 18 to join';
+    }
+    // Secondary identifier is optional in MVP but if provided, must be valid.
+    if (secondary.trim()) {
+      if (draft.method === 'phone') {
+        if (!isValidEmail(secondary.trim())) e.secondary = 'Enter a valid email address';
+      } else if (!isValidE164(secondary.trim())) {
+        e.secondary = 'Enter a valid phone number in international format (e.g. +447...)';
+      }
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleContinue = () => {
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
+    if (!validate()) return;
+    const dobIso = dob ? isoFromDate(dob) : null;
+    const isPhoneMethod = draft.method === 'phone';
+    dispatch({
+      type: 'AUTH/UPDATE_DRAFT',
+      payload: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        dateOfBirth: dobIso,
+        email: isPhoneMethod ? (secondary.trim() || null) : draft.email,
+        phoneE164: isPhoneMethod ? draft.phoneE164 : (secondary.trim() || null),
+      },
+    });
     router.push('/(onboarding)/signup/consents');
+  };
+
+  const onDobChange = (event: DateTimePickerEvent, selected?: Date) => {
+    if (Platform.OS === 'android') {
+      setPickerOpen(false);
+      if (event.type === 'set' && selected) {
+        setDob(selected);
+      }
+    } else if (selected) {
+      setDob(selected);
+    }
   };
 
   return (
@@ -77,32 +119,36 @@ export default function ProfileScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={[styles.backText, { color: colors.primary }]}>← Back</Text>
+            <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
-          <Stepper current={2} total={4} />
+          <ProgressStepper current={1} total={3} />
           <Text style={[styles.title, { color: colors.text }]}>Tell us about yourself</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>We need a few details to set up your account securely.</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            We need a few details to set up your account securely.
+          </Text>
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.text }]}>First name</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.firstName && { borderColor: colors.red }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: errors.firstName ? colors.red : colors.border,
+                  color: colors.text,
+                },
+              ]}
               placeholder="Alex"
               placeholderTextColor={colors.textTertiary}
               value={firstName}
-              onChangeText={(text) => {
-                setFirstName(text);
-                // Auto-advance on iOS autofill (value filled all at once from empty)
-                if (firstName.length === 0 && text.length > 1) {
-                  setTimeout(() => lastNameRef.current?.focus(), 50);
-                }
-              }}
+              onChangeText={setFirstName}
               autoCapitalize="words"
               textContentType="givenName"
               autoComplete="given-name"
               returnKeyType="next"
               onSubmitEditing={() => lastNameRef.current?.focus()}
               blurOnSubmit={false}
+              maxLength={60}
             />
             {errors.firstName && <Text style={[styles.errorText, { color: colors.red }]}>{errors.firstName}</Text>}
           </View>
@@ -111,74 +157,86 @@ export default function ProfileScreen() {
             <Text style={[styles.label, { color: colors.text }]}>Last name</Text>
             <TextInput
               ref={lastNameRef}
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.lastName && { borderColor: colors.red }]}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: errors.lastName ? colors.red : colors.border,
+                  color: colors.text,
+                },
+              ]}
               placeholder="Johnson"
               placeholderTextColor={colors.textTertiary}
               value={lastName}
-              onChangeText={(text) => {
-                setLastName(text);
-                if (lastName.length === 0 && text.length > 1) {
-                  setTimeout(() => dobRef.current?.focus(), 50);
-                }
-              }}
+              onChangeText={setLastName}
               autoCapitalize="words"
               textContentType="familyName"
               autoComplete="family-name"
               returnKeyType="next"
-              onSubmitEditing={() => dobRef.current?.focus()}
               blurOnSubmit={false}
+              maxLength={60}
             />
             {errors.lastName && <Text style={[styles.errorText, { color: colors.red }]}>{errors.lastName}</Text>}
           </View>
 
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.text }]}>Date of birth</Text>
-            <TextInput
-              ref={dobRef}
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.dob && { borderColor: colors.red }]}
-              placeholder="DD / MM / YYYY"
-              placeholderTextColor={colors.textTertiary}
-              value={dob}
-              onChangeText={(text) => {
-                const next = dobRawDigits(text);
-                if (next.length <= 8) {
-                  setDob(formatDob(next));
-                  if (next.length === 8) {
-                    setTimeout(() => emailRef.current?.focus(), 50);
-                  }
-                }
-              }}
-              keyboardType="number-pad"
-              maxLength={14}
-              returnKeyType="next"
-              onSubmitEditing={() => emailRef.current?.focus()}
-              blurOnSubmit={false}
-            />
+            <Pressable
+              onPress={() => setPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Date of birth"
+              accessibilityHint="Opens a date picker"
+              style={[
+                styles.dateBtn,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: errors.dob ? colors.red : colors.border,
+                },
+              ]}
+            >
+              <Calendar size={18} color={colors.textSecondary} />
+              <Text
+                style={[
+                  styles.dateText,
+                  { color: dob ? colors.text : colors.textTertiary },
+                ]}
+              >
+                {dob ? formatDate(dob.toISOString(), 'long') : 'Select date'}
+              </Text>
+            </Pressable>
             {errors.dob && <Text style={[styles.errorText, { color: colors.red }]}>{errors.dob}</Text>}
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.text }]}>Email address</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              {draft.method === 'phone' ? 'Email address' : 'Phone number'}
+            </Text>
             <TextInput
-              ref={emailRef}
-              style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }, errors.email && { borderColor: colors.red }]}
-              placeholder="alex@example.com"
+              ref={secondaryRef}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: errors.secondary ? colors.red : colors.border,
+                  color: colors.text,
+                },
+              ]}
+              placeholder={
+                draft.method === 'phone' ? 'alex@example.com' : '+447700900000'
+              }
               placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (email.length === 0 && text.includes('@')) {
-                  // autofilled email — stay on field, user can press Continue
-                }
-              }}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              autoComplete="email"
+              value={secondary}
+              onChangeText={setSecondary}
+              keyboardType={draft.method === 'phone' ? 'email-address' : 'phone-pad'}
               autoCapitalize="none"
+              textContentType={
+                draft.method === 'phone' ? 'emailAddress' : 'telephoneNumber'
+              }
+              autoComplete={draft.method === 'phone' ? 'email' : 'tel'}
               returnKeyType="done"
               onSubmitEditing={handleContinue}
             />
-            {errors.email && <Text style={[styles.errorText, { color: colors.red }]}>{errors.email}</Text>}
+            {errors.secondary && <Text style={[styles.errorText, { color: colors.red }]}>{errors.secondary}</Text>}
           </View>
 
           <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={handleContinue}>
@@ -186,6 +244,40 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* iOS picker is rendered inline in a sheet for ergonomics; Android pops native dialog. */}
+      {pickerOpen && Platform.OS === 'ios' && (
+        <Modal animationType="fade" transparent visible={pickerOpen}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+              <DateTimePicker
+                value={dob ?? maxDob}
+                mode="date"
+                display="spinner"
+                maximumDate={maxDob}
+                minimumDate={minDob}
+                onChange={onDobChange}
+              />
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+                onPress={() => setPickerOpen(false)}
+              >
+                <Text style={styles.primaryBtnText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {pickerOpen && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={dob ?? maxDob}
+          mode="date"
+          display="calendar"
+          maximumDate={maxDob}
+          minimumDate={minDob}
+          onChange={onDobChange}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -208,6 +300,16 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: 'Inter-Regular',
   },
+  dateBtn: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateText: { fontSize: 17, fontFamily: 'Inter-Regular' },
   errorText: { fontSize: 15, marginTop: 4, fontFamily: 'Inter-Regular' },
   primaryBtn: {
     borderRadius: 14,
@@ -216,4 +318,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalSheet: { padding: 16, borderTopLeftRadius: 24, borderTopRightRadius: 24, gap: 12 },
 });

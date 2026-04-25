@@ -1,6 +1,4 @@
-// Signup step 4 (final) — enter OTP and call verify-registration.
-// On success: tokens are stored, WalletContext is hydrated and navigation
-// goes to home (or invite-welcome if a referral code was applied).
+// Login OTP — verify the code via POST /auth/verify-login.
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -17,18 +15,15 @@ import { useRouter } from 'expo-router';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
-import { ProgressStepper } from '@/components/ui/ProgressStepper';
 import { OtpInput } from '@/components/ui/OtpInput';
-import { useRegister } from '@/hooks/useRegister';
-import { useVerifyRegistration } from '@/hooks/useVerifyRegistration';
+import { useVerifyLogin } from '@/hooks/useVerifyLogin';
+import { useSendLoginCode } from '@/hooks/useSendLoginCode';
 import { useOtpCountdown } from '@/hooks/useOtpCountdown';
 import { ApiError, mapErrorCode } from '@/utils/errors';
 import { getDeviceInfo } from '@/utils/device';
-import { logEvent } from '@/utils/logger';
 import { maskIdentifier } from '@/utils/format';
-import type { RegisterRequest } from '@/types/auth';
 
-export default function SignupOtpScreen() {
+export default function LoginOtpScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { state, dispatch } = useWallet();
@@ -36,43 +31,39 @@ export default function SignupOtpScreen() {
 
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState(0);
 
-  const verify = useVerifyRegistration();
-  const register = useRegister();
-
+  const verify = useVerifyLogin();
+  const resend = useSendLoginCode();
   const { remainingSeconds, isExpired } = useOtpCountdown(draft.resendDeadlineMs);
 
   const target =
     draft.verificationTarget ??
     (draft.email ? maskIdentifier(draft.email) : draft.phoneE164 ? maskIdentifier(draft.phoneE164) : '');
 
-  // If the user reaches this screen without a pending customer (e.g. cold-start
-  // hydration), bounce back to the start of signup.
   useEffect(() => {
-    if (!draft.pendingCustomerId) {
-      router.replace('/(onboarding)/signup');
+    if (!draft.email && !draft.phoneE164) {
+      router.replace('/(onboarding)/login');
     }
-  }, [draft.pendingCustomerId, router]);
+  }, [draft.email, draft.phoneE164, router]);
 
   const handleSubmit = async (code: string) => {
-    if (!draft.pendingCustomerId) return;
     setError(null);
     try {
       const device = await getDeviceInfo();
-      logEvent('signup_otp_verified');
       await verify.mutate({
-        customerId: draft.pendingCustomerId,
+        email: draft.email ?? undefined,
+        phoneE164: draft.phoneE164 ?? undefined,
         code,
         deviceId: device.deviceId,
         platform: device.platform,
         appVersion: device.appVersion,
       });
-      // navigation handled inside the hook
+      // navigation handled inside hook
     } catch (err) {
+      setAttempts((n) => n + 1);
       if (err instanceof ApiError) {
-        if (err.status === 429) {
-          setOtp('');
-        }
+        if (err.status === 429) setOtp('');
         setError(mapErrorCode(err.code) ?? err.message);
         return;
       }
@@ -81,29 +72,12 @@ export default function SignupOtpScreen() {
   };
 
   const handleResend = async () => {
-    if (!isExpired || register.loading) return;
-    if (!draft.firstName || !draft.lastName) {
-      Alert.alert('Missing details', 'Please complete your profile first.');
-      router.replace('/(onboarding)/signup');
-      return;
-    }
+    if (!isExpired || resend.loading) return;
     setError(null);
-    register.rotateKey();
-    const body: RegisterRequest = {
-      firstName: draft.firstName,
-      lastName: draft.lastName,
-      email: draft.email ?? undefined,
-      phoneE164: draft.phoneE164 ?? undefined,
-      dateOfBirth: draft.dateOfBirth ?? undefined,
-      marketingOptIn: draft.marketingOptIn,
-      consentedDocumentIds: draft.acceptedConsentIds.length
-        ? draft.acceptedConsentIds
-        : [1, 2, 3],
-      referralCode: draft.referralCode ?? undefined,
-    };
     try {
-      await register.mutate(body);
-      // Reset deadline; the hook updates draft + resendDeadlineMs.
+      await resend.mutate(
+        draft.email ? { email: draft.email } : { phoneE164: draft.phoneE164 ?? '' },
+      );
       dispatch({
         type: 'AUTH/UPDATE_DRAFT',
         payload: { resendDeadlineMs: Date.now() + 45_000 },
@@ -114,21 +88,14 @@ export default function SignupOtpScreen() {
         setError(mapErrorCode(err.code) ?? err.message);
         return;
       }
-      setError('Could not resend the code. Please try again.');
+      setError('Could not resend the code.');
     }
   };
 
   const handleBack = () => {
-    Alert.alert('Go back?', "You'll need to start again.", [
+    Alert.alert('Go back?', "You'll need to request a new code.", [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Discard',
-        style: 'destructive',
-        onPress: () => {
-          dispatch({ type: 'AUTH/RESET_DRAFT' });
-          router.replace('/(onboarding)/intro');
-        },
-      },
+      { text: 'Go back', onPress: () => router.back() },
     ]);
   };
 
@@ -139,12 +106,8 @@ export default function SignupOtpScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
-          <ProgressStepper current={3} total={3} />
 
-          <Text
-            style={[styles.title, { color: colors.text }]}
-            accessibilityRole="header"
-          >
+          <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
             Enter your code
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -160,15 +123,21 @@ export default function SignupOtpScreen() {
             disabled={verify.loading}
           />
 
-          {error && (
-            <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>
+          {error && <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>}
+
+          {attempts >= 3 && (
+            <TouchableOpacity onPress={() => router.replace('/(onboarding)/signup')}>
+              <Text style={[styles.signUpHint, { color: colors.primary }]}>
+                Don&apos;t have an account? Sign up
+              </Text>
+            </TouchableOpacity>
           )}
 
           <View style={styles.resendRow}>
             {isExpired ? (
               <TouchableOpacity onPress={handleResend} accessibilityHint="Sends a new code">
                 <Text style={[styles.resendLink, { color: colors.primary }]}>
-                  {register.loading ? 'Sending…' : 'Resend code'}
+                  {resend.loading ? 'Sending…' : 'Resend code'}
                 </Text>
               </TouchableOpacity>
             ) : (
@@ -197,12 +166,6 @@ export default function SignupOtpScreen() {
               {verify.loading ? 'Verifying…' : 'Verify'}
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => router.replace('/(onboarding)/signup')}>
-            <Text style={[styles.wrongLink, { color: colors.textSecondary }]}>
-              {draft.method === 'phone' ? 'Wrong number?' : 'Wrong email?'}
-            </Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -218,12 +181,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontFamily: 'Inter-Bold', marginBottom: 8, letterSpacing: -0.5 },
   subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', lineHeight: 22, marginBottom: 28 },
   errorText: { fontSize: 15, marginTop: 12, fontFamily: 'Inter-Medium', textAlign: 'center' },
+  signUpHint: { textAlign: 'center', fontSize: 16, fontFamily: 'Inter-Medium', marginTop: 12 },
   resendRow: { alignItems: 'center', marginVertical: 24 },
   countdown: { fontSize: 16, fontFamily: 'Inter-Regular' },
   countdownBold: { fontFamily: 'Inter-SemiBold' },
   resendLink: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
-  primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 16 },
+  primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
-  wrongLink: { textAlign: 'center', fontSize: 16, fontFamily: 'Inter-Medium' },
 });

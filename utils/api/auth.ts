@@ -1,48 +1,71 @@
 // Auth endpoint helpers.
-// Stub signatures only — request/response types are placeholders to be
-// fully fleshed out per docs/mobile/specs/00-auth.ru.md in the next session.
-
-import type { AxiosResponse } from 'axios';
+// Contracts mirror docs/api/specs/00-auth.ru.md.
+// All helpers return the unwrapped data envelope (handled by api.ts interceptor).
 
 import { api } from '../api';
 import type {
+  AuthSessionResponse,
+  MeResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
   RegisterRequest,
-  RegisterResponse,
-  SendOtpRequest,
-  SendOtpResponse,
-  TokensResponse,
-  VerifyOtpRequest,
-  VerifyOtpResponse,
+  RegistrationPendingResponse,
+  SendCodeRequest,
+  SendCodeResponse,
+  VerifyLoginRequest,
+  VerifyRegistrationRequest,
 } from '@/types/auth';
 
 export const authApi = {
-  // TODO 00-auth: confirm endpoint path and payload shape.
-  sendOtp(data: SendOtpRequest): Promise<AxiosResponse<SendOtpResponse>> {
-    return api.post<SendOtpResponse>('/auth/send-otp', data);
-  },
-
-  // TODO 00-auth: verify-registration vs verify-login split.
-  verifyOtp(data: VerifyOtpRequest): Promise<AxiosResponse<VerifyOtpResponse>> {
-    return api.post<VerifyOtpResponse>('/auth/verify-otp', data);
-  },
-
   register(
     data: RegisterRequest,
     idempotencyKey: string,
-  ): Promise<AxiosResponse<RegisterResponse>> {
-    return api.post<RegisterResponse>('/auth/register', data, {
-      headers: { 'Idempotency-Key': idempotencyKey },
-    });
+  ): Promise<RegistrationPendingResponse> {
+    return api
+      .post<RegistrationPendingResponse>('/auth/register', data, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      })
+      .then((r) => r.data);
   },
 
-  // refreshToken endpoint is also called directly from utils/authQueue.ts
-  // via fetch to break the import cycle. This helper is provided for any
-  // call site that wants to refresh imperatively.
-  refreshToken(refreshToken: string): Promise<AxiosResponse<TokensResponse>> {
-    return api.post<TokensResponse>('/auth/refresh-token', { refreshToken });
+  verifyRegistration(
+    data: VerifyRegistrationRequest,
+  ): Promise<AuthSessionResponse> {
+    return api
+      .post<AuthSessionResponse>('/auth/verify-registration', data)
+      .then((r) => r.data);
   },
 
-  logout(): Promise<AxiosResponse<void>> {
-    return api.post<void>('/auth/logout');
+  sendCode(data: SendCodeRequest): Promise<SendCodeResponse> {
+    return api
+      .post<SendCodeResponse>('/auth/send-code', data)
+      .then((r) => r.data);
+  },
+
+  verifyLogin(data: VerifyLoginRequest): Promise<AuthSessionResponse> {
+    return api
+      .post<AuthSessionResponse>('/auth/verify-login', data)
+      .then((r) => r.data);
+  },
+
+  // Refresh is also called directly from utils/authQueue.ts via plain fetch
+  // to avoid a circular import. This helper is kept for imperative call sites.
+  refresh(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
+    return api
+      .post<RefreshTokenResponse>('/auth/refresh-token', data)
+      .then((r) => r.data);
+  },
+
+  // Best-effort: ignore network/HTTP errors per spec §4.9.
+  async logout(): Promise<void> {
+    try {
+      await api.post<void>('/auth/logout');
+    } catch {
+      // swallow — logout must not block local sign-out.
+    }
+  },
+
+  logoutAll(): Promise<void> {
+    return api.post<void>('/auth/logout-all').then(() => undefined);
   },
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthEvents } from '../utils/authEvents';
+import { setReferralDeepLinkListener } from '../utils/deepLinks';
 import type {
   User,
   WalletData,
@@ -17,6 +18,7 @@ import type {
   Dispute,
   NotificationSettings,
 } from '../types';
+import type { AuthChannel, AuthUser, WalletSummary } from '../types/auth';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -26,6 +28,40 @@ import {
   MOCK_CONSENTS,
   MOCK_PAYMENT_METHODS,
 } from '../data/mockData';
+
+export interface SignupDraft {
+  method: AuthChannel | null;
+  email: string | null;
+  phoneE164: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  dateOfBirth: string | null; // YYYY-MM-DD
+  referralCode: string | null;
+  acceptedConsentIds: number[];
+  marketingOptIn: boolean;
+  pendingCustomerId: string | null;
+  verificationTarget: string | null;
+  otpExpiresAt: string | null;
+  resendDeadlineMs: number | null;
+  registerIdempotencyKey: string | null;
+}
+
+const initialSignupDraft: SignupDraft = {
+  method: null,
+  email: null,
+  phoneE164: null,
+  firstName: null,
+  lastName: null,
+  dateOfBirth: null,
+  referralCode: null,
+  acceptedConsentIds: [],
+  marketingOptIn: false,
+  pendingCustomerId: null,
+  verificationTarget: null,
+  otpExpiresAt: null,
+  resendDeadlineMs: null,
+  registerIdempotencyKey: null,
+};
 
 interface WalletState {
   initialized: boolean;
@@ -45,7 +81,16 @@ interface WalletState {
   disputes: Dispute[];
   notificationSettings: NotificationSettings;
   dismissedBanners: string[];
+  signupDraft: SignupDraft;
+  pendingReferralCode: string | null;
+  lastAuthError: string | null;
 }
+
+type AuthLoginPayload = {
+  user: User;
+  walletSummary?: WalletSummary | null;
+  onboardingComplete: boolean;
+};
 
 type WalletAction =
   | { type: 'HYDRATE'; payload: Partial<WalletState> }
@@ -69,7 +114,15 @@ type WalletAction =
   | { type: 'UPDATE_NOTIFICATION_SETTINGS'; payload: Partial<NotificationSettings> }
   | { type: 'DISMISS_BANNER'; payload: string }
   | { type: 'DELETE_CARD' }
-  | { type: 'LOGOUT' };
+  | { type: 'LOGOUT' }
+  // --- Auth slice (spec 00-auth) ---
+  | { type: 'AUTH/UPDATE_DRAFT'; payload: Partial<SignupDraft> }
+  | { type: 'AUTH/RESET_DRAFT' }
+  | { type: 'AUTH/LOGIN_SUCCESS'; payload: AuthLoginPayload }
+  | { type: 'AUTH/LOGOUT' }
+  | { type: 'AUTH/SET_REFERRAL'; payload: string }
+  | { type: 'AUTH/CLEAR_REFERRAL' }
+  | { type: 'AUTH/SET_LAST_ERROR'; payload: string | null };
 
 const initialWallet: WalletData = {
   balance: 247.5,
@@ -148,6 +201,9 @@ const defaultState: WalletState = {
   disputes: [],
   notificationSettings: initialNotificationSettings,
   dismissedBanners: [],
+  signupDraft: initialSignupDraft,
+  pendingReferralCode: null,
+  lastAuthError: null,
 };
 
 function walletReducer(state: WalletState, action: WalletAction): WalletState {
@@ -269,7 +325,59 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
       return { ...state, card: { ...state.card, status: 'not_issued' } };
 
     case 'LOGOUT':
-      return { ...defaultState, initialized: true };
+      return {
+        ...defaultState,
+        initialized: true,
+        pendingReferralCode: state.pendingReferralCode,
+      };
+
+    // --- Auth slice ----------------------------------------------------------
+
+    case 'AUTH/UPDATE_DRAFT':
+      return {
+        ...state,
+        signupDraft: { ...state.signupDraft, ...action.payload },
+      };
+
+    case 'AUTH/RESET_DRAFT':
+      return { ...state, signupDraft: initialSignupDraft };
+
+    case 'AUTH/LOGIN_SUCCESS':
+      return {
+        ...state,
+        user: action.payload.user,
+        onboardingComplete: action.payload.onboardingComplete,
+        signupDraft: initialSignupDraft,
+        lastAuthError: null,
+        card: {
+          ...state.card,
+          holderName: `${action.payload.user.firstName} ${action.payload.user.lastName}`,
+        },
+      };
+
+    case 'AUTH/LOGOUT':
+      return {
+        ...defaultState,
+        initialized: true,
+        // pendingReferralCode survives logout — a deep link may have arrived earlier.
+        pendingReferralCode: state.pendingReferralCode,
+      };
+
+    case 'AUTH/SET_REFERRAL':
+      // If user already logged-in, stash separately so signup draft is untouched.
+      if (state.user) {
+        return { ...state, pendingReferralCode: action.payload };
+      }
+      return {
+        ...state,
+        signupDraft: { ...state.signupDraft, referralCode: action.payload },
+      };
+
+    case 'AUTH/CLEAR_REFERRAL':
+      return { ...state, pendingReferralCode: null };
+
+    case 'AUTH/SET_LAST_ERROR':
+      return { ...state, lastAuthError: action.payload };
 
     default:
       return state;
@@ -310,6 +418,19 @@ const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
 const STORAGE_KEY = 'wallet_state_v1';
 
+// Persist everything except in-memory-only flags.
+// Importantly: signupDraft is in-memory only — it can carry pending PII
+// (DOB, name, contact) before /auth/register has been issued.
+function buildPersistPayload(state: WalletState): Partial<WalletState> {
+  const {
+    initialized: _initialized,
+    lastAuthError: _lastAuthError,
+    signupDraft: _signupDraft,
+    ...rest
+  } = state;
+  return rest;
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(walletReducer, defaultState);
 
@@ -318,8 +439,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
-          const parsed = JSON.parse(stored);
-          dispatch({ type: 'HYDRATE', payload: parsed });
+          const parsed = JSON.parse(stored) as Partial<WalletState>;
+          // Don't restore signupDraft from disk — it's intentionally not persisted.
+          const { signupDraft: _ignore, ...rest } = parsed;
+          dispatch({ type: 'HYDRATE', payload: rest });
         }
       } catch {
       } finally {
@@ -330,16 +453,28 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!state.initialized) return;
-    const { initialized, ...toStore } = state;
+    const toStore = buildPersistPayload(state);
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toStore)).catch(() => {});
   }, [state]);
 
   // Listen for forced-logout signals from the API interceptor (refresh failure).
   useEffect(() => {
     const unsubscribe = AuthEvents.on('logout', () => {
-      dispatch({ type: 'LOGOUT' });
+      AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+      dispatch({ type: 'AUTH/LOGOUT' });
     });
     return unsubscribe;
+  }, []);
+
+  // Bridge deep-link `invite?code=…` into the auth slice. The handler in
+  // utils/deepLinks.ts already routes to intro / referral.
+  useEffect(() => {
+    setReferralDeepLinkListener((code) => {
+      dispatch({ type: 'AUTH/SET_REFERRAL', payload: code });
+    });
+    return () => {
+      setReferralDeepLinkListener(null);
+    };
   }, []);
 
   const completeOnboarding = useCallback((user: User) => {
@@ -407,7 +542,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
-    dispatch({ type: 'LOGOUT' });
+    dispatch({ type: 'AUTH/LOGOUT' });
   }, []);
 
   const unreadNotificationsCount = state.notifications.filter((n) => !n.read).length;
@@ -459,4 +594,17 @@ export function useWallet(): WalletContextValue {
   const ctx = useContext(WalletContext);
   if (!ctx) throw new Error('useWallet must be used within WalletProvider');
   return ctx;
+}
+
+// Adapter: convert AuthUser (from /me, /verify-*) into the legacy User
+// shape used across screens that haven't migrated yet.
+export function authUserToUser(auth: AuthUser, signupMethod: AuthChannel): User {
+  return {
+    firstName: auth.firstName,
+    lastName: auth.lastName,
+    dob: '',
+    email: auth.email ?? '',
+    phone: auth.phoneE164 ?? undefined,
+    signupMethod,
+  };
 }

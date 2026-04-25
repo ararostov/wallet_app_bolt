@@ -110,6 +110,23 @@ export function formatPhoneE164(e164: string, opts: PhoneFormatOptions = {}): st
   return `+${country} ${grouped}`.trim();
 }
 
+// Mask an email or E.164 phone for display in OTP screens / logs.
+// - email: keeps first 2 chars + domain → "al***@example.com".
+// - phone: keeps country code + last 4 digits → "+44 *** *** 1234".
+export function maskIdentifier(identifier: string): string {
+  if (typeof identifier !== 'string' || identifier.length === 0) return '';
+  if (identifier.includes('@')) {
+    const [local, domain] = identifier.split('@');
+    if (!local || !domain) return identifier;
+    const visible = local.slice(0, Math.min(2, local.length));
+    return `${visible}***@${domain}`;
+  }
+  if (identifier.startsWith('+')) {
+    return formatPhoneE164(identifier, { masked: true });
+  }
+  return identifier;
+}
+
 // Parse user-entered amount string into minor units.
 // Accepts "12", "12.5", "12.50". Throws on invalid input — callers should
 // validate first or wrap in try/catch.

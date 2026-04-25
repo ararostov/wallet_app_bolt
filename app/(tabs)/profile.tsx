@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useLogout } from '@/hooks/useLogout';
 
 interface SettingsGroup {
   title: string;
@@ -84,7 +85,8 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, logout } = useWallet();
+  const { state } = useWallet();
+  const { logout, loading: logoutLoading } = useLogout();
   const { colors, isDark, toggleTheme } = useTheme();
   const { user, tier } = state;
 
@@ -166,9 +168,15 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={[styles.version, { color: colors.textTertiary }]}>Tesco Wallet v1.0.0</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={() => { logout(); router.replace('/(onboarding)/intro'); }}>
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={() => { logout(); }}
+          disabled={logoutLoading}
+        >
           <LogOut size={16} color={colors.red} />
-          <Text style={[styles.logoutText, { color: colors.red }]}>Log out</Text>
+          <Text style={[styles.logoutText, { color: colors.red }]}>
+            {logoutLoading ? 'Logging out…' : 'Log out'}
+          </Text>
         </TouchableOpacity>
         <View style={{ height: 20 }} />
       </ScrollView>

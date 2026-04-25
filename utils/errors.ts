@@ -71,6 +71,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   WEAK_PASSWORD: 'Password is too weak. Use at least 8 characters with letters and numbers.',
   PASSWORD_SAME_AS_CURRENT: 'New password must differ from current.',
   INVALID_CURRENT_PASSWORD: 'The current password is incorrect.',
+  NO_ACTIVE_WALLET_PROGRAM: "We can't set up your wallet right now. Please contact support.",
+  CUSTOMER_SUSPENDED: 'Your account is temporarily suspended. Please contact support.',
+  CUSTOMER_BLOCKED: 'Your account has been blocked. Please contact support.',
+  CUSTOMER_CLOSED: 'This account has been closed.',
 
   // Wallet
   BALANCE_CEILING_EXCEEDED: 'Top-up exceeds your balance limit.',

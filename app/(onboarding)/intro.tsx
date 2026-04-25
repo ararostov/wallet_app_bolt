@@ -51,6 +51,7 @@ export default function IntroScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
 
   const goToSignup = () => router.push('/(onboarding)/signup');
+  const goToLogin = () => router.push('/(onboarding)/login');
 
   const goNext = () => {
     if (activeIndex < SLIDES.length - 1) {
@@ -119,7 +120,7 @@ export default function IntroScreen() {
           <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={activeIndex === SLIDES.length - 1 ? goToSignup : goNext}>
             <Text style={styles.primaryBtnText}>{activeIndex === SLIDES.length - 1 ? 'Get started' : 'Next'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={goToSignup}>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={goToLogin}>
             <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>I already have an account</Text>
           </TouchableOpacity>
         </View>

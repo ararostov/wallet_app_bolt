@@ -1,62 +1,132 @@
-// Minimal placeholder types for auth flow.
-// TODO: flesh out per spec docs/mobile/specs/00-auth.ru.md (next session).
-// These exist to satisfy `utils/api/auth.ts` compile.
+// Auth domain types — aligned with docs/api/specs/00-auth.ru.md.
+// All field names are camelCase (envelope is unwrapped by api.ts interceptor;
+// backend serialises through BaseApiResource which converts snake → camel).
 
-export type SendOtpPurpose = 'registration' | 'login' | 'password_reset' | 'contact_change';
+export type AuthChannel = 'phone' | 'email';
 
-// TODO 00-auth: align with backend POST /auth/send-otp request body.
-export type SendOtpRequest = {
-  identifier: string; // email or E.164 phone
-  purpose: SendOtpPurpose;
-};
+export type Platform = 'ios' | 'android';
 
-// TODO 00-auth: align with envelope unwrap (already-stripped by interceptor).
-export type SendOtpResponse = {
-  verificationId: string;
-  expiresAt: string; // ISO 8601 UTC
-  resendAvailableAt: string; // ISO 8601 UTC
-};
+export type CustomerStatus =
+  | 'active'
+  | 'pending'
+  | 'suspended'
+  | 'blocked'
+  | 'closed';
 
-// TODO 00-auth: VerifyOtp covers both registration and login flows.
-export type VerifyOtpRequest = {
-  verificationId: string;
-  code: string;
-};
-
-export type VerifyOtpResponse = {
-  // For registration: returns a registration session id to feed into /auth/register.
-  registrationSessionId?: string;
-  // For login: returns tokens immediately.
-  tokens?: TokensResponse;
-  user?: AuthUser;
-};
-
-// TODO 00-auth: actual fields per spec.
-export type RegisterRequest = {
-  registrationSessionId: string;
-  firstName: string;
-  lastName: string;
-  dob: string; // ISO date
-  acceptedConsentIds: string[];
-};
-
-export type RegisterResponse = {
-  user: AuthUser;
-  tokens: TokensResponse;
-};
-
-export type TokensResponse = {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string; // ISO 8601 UTC
-  refreshTokenExpiresAt: string; // ISO 8601 UTC
-};
-
-// TODO 00-auth: replace with shared User type from types/index.ts after auth shape is finalised.
-export type AuthUser = {
+export interface AuthUser {
   id: string;
   firstName: string;
   lastName: string;
+  fullName: string;
   email: string | null;
   phoneE164: string | null;
-};
+  status: CustomerStatus;
+  marketingOptIn: boolean;
+  hasPassword: boolean;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  createdAt: string;
+}
+
+export interface MoneyAmount {
+  amountMinor: number;
+  currency: string;
+}
+
+export type WalletStatus = 'pending' | 'active' | 'frozen' | 'closed';
+
+export interface WalletSummary {
+  id: string;
+  status: WalletStatus;
+  balance: MoneyAmount;
+  pendingBalance: MoneyAmount;
+}
+
+export interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: 'Bearer';
+  expiresIn: number;
+  expiresAt: string;
+}
+
+// --- Register --------------------------------------------------------------
+
+export interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phoneE164?: string;
+  dateOfBirth?: string; // YYYY-MM-DD
+  marketingOptIn: boolean;
+  consentedDocumentIds: number[];
+  referralCode?: string;
+}
+
+export interface RegistrationPendingResponse {
+  customerId: string;
+  verificationTarget: string; // masked, e.g. "al***@example.com"
+  expiresInSeconds: number;
+  attemptsRemaining: number;
+}
+
+// --- Verify registration ---------------------------------------------------
+
+export interface VerifyRegistrationRequest {
+  customerId: string;
+  code: string;
+  deviceId: string;
+  platform: Platform;
+  appVersion: string;
+}
+
+export interface AuthSessionResponse {
+  customer: AuthUser;
+  wallet: WalletSummary;
+  tokens: AuthTokens;
+}
+
+// --- Send code (login) -----------------------------------------------------
+
+export interface SendCodeRequest {
+  email?: string;
+  phoneE164?: string;
+}
+
+export interface SendCodeResponse {
+  customerId?: string;
+  verificationTarget: string;
+  expiresInSeconds: number;
+  attemptsRemaining: number;
+}
+
+// --- Verify login ----------------------------------------------------------
+
+export interface VerifyLoginRequest {
+  email?: string;
+  phoneE164?: string;
+  code: string;
+  deviceId: string;
+  platform: Platform;
+  appVersion: string;
+}
+
+// --- Refresh ---------------------------------------------------------------
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+  deviceId?: string;
+  platform?: Platform;
+  appVersion?: string;
+}
+
+export interface RefreshTokenResponse {
+  tokens: AuthTokens;
+}
+
+// --- /me -------------------------------------------------------------------
+
+export interface MeResponse {
+  customer: AuthUser;
+  wallet: WalletSummary;
+}
