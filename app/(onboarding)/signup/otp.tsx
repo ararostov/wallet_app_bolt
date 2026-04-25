@@ -87,6 +87,12 @@ export default function SignupOtpScreen() {
       router.replace('/(onboarding)/signup');
       return;
     }
+    if (draft.acceptedConsentIds.length === 0) {
+      // Got here via a legacy / stale draft path — make the user re-review
+      // the legal documents before any further register call.
+      router.replace('/(onboarding)/signup');
+      return;
+    }
     setError(null);
     register.rotateKey();
     const body: RegisterRequest = {
@@ -96,9 +102,7 @@ export default function SignupOtpScreen() {
       phoneE164: draft.phoneE164 ?? undefined,
       dateOfBirth: draft.dateOfBirth ?? undefined,
       marketingOptIn: draft.marketingOptIn,
-      consentedDocumentIds: draft.acceptedConsentIds.length
-        ? draft.acceptedConsentIds
-        : [1, 2, 3],
+      consentedDocumentIds: draft.acceptedConsentIds,
       referralCode: draft.referralCode ?? undefined,
     };
     try {
@@ -111,6 +115,34 @@ export default function SignupOtpScreen() {
       setOtp('');
     } catch (err) {
       if (err instanceof ApiError) {
+        if (err.status === 409 && err.code === 'CUSTOMER_ALREADY_REGISTERED') {
+          // Contact is already an active customer — resend via /auth/register
+          // can never succeed. Route into the login flow with the same identifier.
+          Alert.alert(
+            'Already registered',
+            mapErrorCode(err.code) ?? err.message,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Log in',
+                onPress: () => {
+                  dispatch({ type: 'AUTH/RESET_DRAFT' });
+                  router.replace('/(onboarding)/login');
+                },
+              },
+            ],
+          );
+          return;
+        }
+        if (err.status === 422 && err.code === 'VALIDATION_FAILED') {
+          // Most often the cached legal-documents set went stale.
+          Alert.alert(
+            'Please review your details',
+            mapErrorCode(err.code) ?? err.message,
+            [{ text: 'Review', onPress: () => router.replace('/(onboarding)/signup') }],
+          );
+          return;
+        }
         setError(mapErrorCode(err.code) ?? err.message);
         return;
       }
