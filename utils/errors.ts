@@ -103,6 +103,22 @@ const ERROR_MESSAGES: Record<string, string> = {
   WALLET_FROZEN: 'Your wallet is frozen. Contact support.',
   WALLET_NOT_FOUND: 'Wallet not found.',
 
+  // Auto-reload (02-wallet)
+  AUTO_RELOAD_INVALID_THRESHOLD:
+    'Top-up amount must be greater than the trigger balance.',
+  AUTO_RELOAD_INVALID_AMOUNT: 'Top-up amount is outside the allowed range.',
+  AUTO_RELOAD_AMOUNT_INVALID: 'Top-up amount is outside the allowed range.',
+  AUTO_RELOAD_PAYMENT_METHOD_REQUIRED: 'Select a payment method.',
+  AUTO_RELOAD_PAYMENT_METHOD_INVALID:
+    'This payment method is no longer available.',
+  AUTO_RELOAD_CURRENCY_MISMATCH:
+    'This payment method uses a different currency.',
+  AUTO_RELOAD_LIMIT_EXCEEDED: 'Limits exceed program defaults.',
+  AUTO_RELOAD_DAILY_CAP_INVALID:
+    'Daily cap must be at least the reload amount.',
+  AUTO_RELOAD_MONTHLY_CAP_INVALID:
+    'Monthly cap must be at least the daily cap.',
+
   // Card
   CARD_ALREADY_FROZEN: 'This card is already frozen.',
   CARD_NOT_FROZEN: 'This card is not frozen.',

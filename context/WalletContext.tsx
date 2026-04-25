@@ -23,6 +23,13 @@ import type {
   ContactChangeInProgress,
   ProfileConsent,
 } from '../types/profile';
+import type {
+  AutoReloadSummary,
+  CardSummary as ApiCardSummary,
+  TierSummary as ApiTierSummary,
+  WalletStateData,
+  WalletStateWallet,
+} from '../types/wallet';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -70,6 +77,9 @@ interface WalletState {
   initialized: boolean;
   onboardingComplete: boolean;
   user: User | null;
+  // --- Legacy mock-shape slices (consumed by screens that haven't been
+  // migrated yet — topup/*, card/*, tier.tsx, profile.tsx, transactions/*).
+  // Specs 03–07 will replace these as those surfaces are wired to the API.
   wallet: WalletData;
   card: Card;
   transactions: Transaction[];
@@ -80,6 +90,13 @@ interface WalletState {
   referral: ReferralProgram;
   paymentMethods: PaymentMethod[];
   notifications: Notification[];
+  // --- Backend-shape wallet slices (spec 02-wallet). The Home tab and
+  // /auto-reload screen read from these; legacy screens still read from
+  // the slices above. Both stay in sync via WALLET/HYDRATE_FROM_STATE.
+  walletApi: WalletStateWallet | null;
+  cardApi: ApiCardSummary | null;
+  tierApi: ApiTierSummary | null;
+  autoReloadApi: AutoReloadSummary | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -112,6 +129,10 @@ type WalletAction =
   | { type: 'REMOVE_PAYMENT_METHOD'; payload: string }
   | { type: 'SET_DEFAULT_PAYMENT_METHOD'; payload: string }
   | { type: 'UPDATE_AUTO_RELOAD'; payload: Partial<AutoReload> }
+  // --- Backend-shape wallet slice (spec 02-wallet) ---
+  | { type: 'WALLET/HYDRATE_FROM_STATE'; payload: WalletStateData }
+  | { type: 'WALLET/SET_BALANCE'; payload: { available: { amountMinor: number; currency: string }; pending: { amountMinor: number; currency: string }; status: WalletStateWallet['status'] } }
+  | { type: 'WALLET/SET_AUTO_RELOAD'; payload: AutoReloadSummary | null }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -210,6 +231,10 @@ const defaultState: WalletState = {
   referral: initialReferral,
   paymentMethods: MOCK_PAYMENT_METHODS,
   notifications: MOCK_NOTIFICATIONS,
+  walletApi: null,
+  cardApi: null,
+  tierApi: null,
+  autoReloadApi: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -353,18 +378,35 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
     case 'AUTH/RESET_DRAFT':
       return { ...state, signupDraft: initialSignupDraft };
 
-    case 'AUTH/LOGIN_SUCCESS':
+    case 'AUTH/LOGIN_SUCCESS': {
+      // Hydrate the backend-shape wallet slice from the auth WalletSummary if
+      // the response carried one. Auth's WalletSummary is a strict subset of
+      // /wallet/state.wallet (no merchantId / openedAt / currency) — fill the
+      // missing currency from the balance pair so the slice is usable
+      // immediately for the Home screen before /wallet/state runs.
+      const summary = action.payload.walletSummary;
+      const walletApi: WalletStateWallet | null = summary
+        ? {
+            id: summary.id,
+            status: summary.status,
+            currency: summary.balance.currency,
+            balance: summary.balance,
+            pendingBalance: summary.pendingBalance,
+          }
+        : state.walletApi;
       return {
         ...state,
         user: action.payload.user,
         onboardingComplete: action.payload.onboardingComplete,
         signupDraft: initialSignupDraft,
         lastAuthError: null,
+        walletApi,
         card: {
           ...state.card,
           holderName: `${action.payload.user.firstName} ${action.payload.user.lastName}`,
         },
       };
+    }
 
     case 'AUTH/LOGOUT':
       return {
@@ -425,6 +467,36 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     case 'ACCOUNT/DELETION_CLEARED':
       return { ...state, accountDeletion: null };
+
+    // --- Wallet slice (spec 02-wallet) -------------------------------------
+
+    case 'WALLET/HYDRATE_FROM_STATE': {
+      const { wallet, card, tier, autoReload } = action.payload;
+      return {
+        ...state,
+        walletApi: wallet,
+        cardApi: card,
+        tierApi: tier,
+        autoReloadApi: autoReload,
+      };
+    }
+
+    case 'WALLET/SET_BALANCE':
+      if (!state.walletApi) {
+        return state;
+      }
+      return {
+        ...state,
+        walletApi: {
+          ...state.walletApi,
+          status: action.payload.status,
+          balance: action.payload.available,
+          pendingBalance: action.payload.pending,
+        },
+      };
+
+    case 'WALLET/SET_AUTO_RELOAD':
+      return { ...state, autoReloadApi: action.payload };
 
     default:
       return state;
