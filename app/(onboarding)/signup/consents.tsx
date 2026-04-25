@@ -1,14 +1,16 @@
-// Signup step 3 — review consents, submit register, navigate to OTP.
+// Signup step 3 — fetch the merchant's active legal documents from the
+// backend, render them as consent rows, and submit POST /auth/register with
+// the accepted document ids in `consentedDocumentIds`.
 //
-// In MVP we don't yet have GET /legal/documents wired (spec 10), so the
-// consentedDocumentIds we send to the backend are placeholder numeric IDs
-// keyed off the local consent definitions. Replace with the real fetch when
-// 10-help-legal lands.
+// Marketing opt-in is a SEPARATE field from legal documents — kept as local
+// UI on this screen and folded into a single boolean for the register call,
+// matching `RegisterRequest.marketingOptIn`. Channel-specific marketing
+// consents (email / SMS / push) are not part of the legal-documents flow.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,87 +20,20 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { X } from 'lucide-react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { useRegister } from '@/hooks/useRegister';
+import { useQuery } from '@/hooks/useQuery';
 import { ProgressStepper } from '@/components/ui/ProgressStepper';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { mapErrorCode } from '@/utils/errors';
+import { Badge } from '@/components/ui/Badge';
+import { legalApi } from '@/utils/api/legal';
 import { ApiError } from '@/utils/errors';
+import { mapErrorCode } from '@/utils/errors';
 import { logEvent } from '@/utils/logger';
 import type { RegisterRequest } from '@/types/auth';
-
-interface ConsentDef {
-  id: string;
-  // Numeric ID expected by the backend payload. In a real MVP this comes
-  // from GET /legal/documents — see TODO above.
-  legalId: number;
-  label: string;
-  required: boolean;
-  marketing: boolean;
-  description: string;
-}
-
-const CONSENTS: ConsentDef[] = [
-  {
-    id: 'terms',
-    legalId: 1,
-    label: 'Terms & Conditions',
-    required: true,
-    marketing: false,
-    description: 'I agree to the Terms and Conditions governing use of the Wallet service.',
-  },
-  {
-    id: 'privacy',
-    legalId: 2,
-    label: 'Privacy Policy',
-    required: true,
-    marketing: false,
-    description: 'I have read and accept the Privacy Policy, including how my personal data is processed.',
-  },
-  {
-    id: 'age',
-    legalId: 3,
-    label: 'I confirm I am 18 or over',
-    required: true,
-    marketing: false,
-    description: 'You must be at least 18 to use this service.',
-  },
-  {
-    id: 'marketing_email',
-    legalId: 4,
-    label: 'Marketing emails',
-    required: false,
-    marketing: true,
-    description: 'Send me product updates and personalised offers via email.',
-  },
-  {
-    id: 'marketing_sms',
-    legalId: 5,
-    label: 'Marketing SMS',
-    required: false,
-    marketing: true,
-    description: 'Send me product updates and personalised offers via SMS.',
-  },
-  {
-    id: 'marketing_push',
-    legalId: 6,
-    label: 'Promotional push',
-    required: false,
-    marketing: true,
-    description: 'Send me promotional push notifications about rewards and offers.',
-  },
-  {
-    id: 'analytics',
-    legalId: 7,
-    label: 'Product analytics & personalisation',
-    required: false,
-    marketing: false,
-    description: 'Allow anonymised usage data to improve the product.',
-  },
-];
+import type { LegalDocumentListItem } from '@/types/legal';
 
 export default function ConsentsScreen() {
   const router = useRouter();
@@ -106,24 +41,67 @@ export default function ConsentsScreen() {
   const { state } = useWallet();
   const draft = state.signupDraft;
 
-  const initialAccepted = useMemo<Record<string, boolean>>(
-    () => Object.fromEntries(CONSENTS.map((c) => [c.id, false])),
-    [],
+  const legalQuery = useQuery<LegalDocumentListItem[]>(
+    'legal-documents',
+    async () => {
+      const data = await legalApi.list();
+      return { data };
+    },
+    {
+      // Backend Cache-Control says 10 min — match it.
+      ttlMs: 10 * 60 * 1000,
+      staleMs: 60 * 1000,
+      refetchOnFocus: false,
+    },
   );
-  const [accepted, setAccepted] = useState<Record<string, boolean>>(initialAccepted);
-  const [modalConsent, setModalConsent] = useState<ConsentDef | null>(null);
+
+  const documents = useMemo(() => legalQuery.data ?? [], [legalQuery.data]);
+
+  // Sort: required first (so the user can't miss them), then by published
+  // date descending. Stable enough for the small list (<= 4 rows on MVP).
+  const sortedDocuments = useMemo(() => {
+    return [...documents].sort((a, b) => {
+      if (a.required !== b.required) return a.required ? -1 : 1;
+      return b.publishedAt.localeCompare(a.publishedAt);
+    });
+  }, [documents]);
+
+  const [accepted, setAccepted] = useState<Record<string, boolean>>({});
+  const [marketingOptIn, setMarketingOptIn] = useState<boolean>(draft.marketingOptIn ?? false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Reset acceptance state when the document set changes (e.g. after retry
+  // or when versions changed since last visit).
+  useEffect(() => {
+    setAccepted((prev) => {
+      const next: Record<string, boolean> = {};
+      for (const doc of documents) {
+        next[doc.id] = prev[doc.id] ?? false;
+      }
+      return next;
+    });
+  }, [documents]);
 
   const register = useRegister();
 
-  const requiredOk = CONSENTS.filter((c) => c.required).every((c) => accepted[c.id]);
+  const requiredOk = sortedDocuments
+    .filter((d) => d.required)
+    .every((d) => accepted[d.id]);
+
+  const hasDocuments = sortedDocuments.length > 0;
+  const submitDisabled =
+    legalQuery.loading || !!legalQuery.error || !hasDocuments || !requiredOk || register.loading;
 
   const toggle = (id: string) => {
     setAccepted((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const openDocument = (doc: LegalDocumentListItem) => {
+    router.push({ pathname: '/legal/[id]', params: { id: doc.id } });
+  };
+
   const handleSubmit = async () => {
-    if (!requiredOk) return;
+    if (submitDisabled) return;
     setSubmitError(null);
 
     if (!draft.firstName || !draft.lastName) {
@@ -132,12 +110,13 @@ export default function ConsentsScreen() {
       return;
     }
 
-    const consentedDocumentIds = CONSENTS.filter((c) => accepted[c.id]).map(
-      (c) => c.legalId,
-    );
-    const marketingOptIn = CONSENTS.some(
-      (c) => c.marketing && accepted[c.id],
-    );
+    // Backend `consentedDocumentIds` items are typed as `integer`. The list
+    // endpoint serialises ids as strings (project bigint-as-string convention)
+    // — convert once at the boundary.
+    const consentedDocumentIds = sortedDocuments
+      .filter((d) => accepted[d.id])
+      .map((d) => Number(d.id))
+      .filter((n) => Number.isFinite(n));
 
     const body: RegisterRequest = {
       firstName: draft.firstName,
@@ -175,6 +154,22 @@ export default function ConsentsScreen() {
           router.back();
           return;
         }
+        if (err.status === 422 && err.code === 'VALIDATION_FAILED') {
+          // Most common case here: the backend rejected our consent set —
+          // typically because Terms of Service was missing from
+          // consentedDocumentIds, or a new required document was published
+          // since we cached the list. Re-fetch and ask the user to review.
+          const fields = err.details as
+            | Record<string, string[] | undefined>
+            | undefined;
+          const consentMessage = fields?.consentedDocumentIds?.[0];
+          setSubmitError(
+            consentMessage ??
+              'Some required consents are missing. Please review and try again.',
+          );
+          legalQuery.refetch().catch(() => undefined);
+          return;
+        }
         setSubmitError(mapErrorCode(err.code) ?? err.message);
         return;
       }
@@ -202,89 +197,137 @@ export default function ConsentsScreen() {
         </Text>
 
         {submitError && (
-          <View style={[styles.errorBanner, { backgroundColor: colors.redLight, borderColor: colors.red }]}>
+          <View
+            style={[
+              styles.errorBanner,
+              { backgroundColor: colors.redLight, borderColor: colors.red },
+            ]}
+          >
             <Text style={[styles.errorBannerText, { color: colors.red }]}>{submitError}</Text>
           </View>
         )}
 
-        {CONSENTS.map((consent) => (
+        {legalQuery.loading && !hasDocuments && (
+          <View style={styles.loading}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Loading legal documents…
+            </Text>
+          </View>
+        )}
+
+        {legalQuery.error && (
+          <View
+            style={[styles.errorBanner, { backgroundColor: colors.redLight, borderColor: colors.red }]}
+          >
+            <Text style={[styles.errorBannerText, { color: colors.red }]}>
+              We couldn't load the legal documents. Please check your connection and try again.
+            </Text>
+            <Pressable
+              onPress={() => legalQuery.refetch()}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.retryText, { color: colors.red }]}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {!legalQuery.loading && !legalQuery.error && !hasDocuments && (
+          <View
+            style={[
+              styles.errorBanner,
+              { backgroundColor: colors.amberLight, borderColor: colors.amber },
+            ]}
+          >
+            <Text style={[styles.errorBannerText, { color: colors.amber }]}>
+              Legal documents are not available right now — please try again later.
+            </Text>
+            <Pressable
+              onPress={() => legalQuery.refetch()}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.retryText, { color: colors.amber }]}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {sortedDocuments.map((doc) => (
           <Pressable
-            key={consent.id}
+            key={doc.id}
             style={styles.consentRow}
-            onPress={() => toggle(consent.id)}
+            onPress={() => toggle(doc.id)}
             accessibilityRole="checkbox"
-            accessibilityState={{ checked: !!accepted[consent.id] }}
-            accessibilityLabel={`${consent.label}, ${consent.required ? 'required' : 'optional'}`}
+            accessibilityState={{ checked: !!accepted[doc.id] }}
+            accessibilityLabel={`${doc.title}, ${doc.required ? 'required' : 'optional'}`}
           >
             <View style={{ marginTop: 2 }}>
               <Checkbox
-                checked={!!accepted[consent.id]}
-                onToggle={() => toggle(consent.id)}
-                accessibilityLabel={consent.label}
+                checked={!!accepted[doc.id]}
+                onToggle={() => toggle(doc.id)}
+                accessibilityLabel={doc.title}
               />
             </View>
             <View style={styles.consentContent}>
               <View style={styles.consentLabelRow}>
-                <Text style={[styles.consentLabel, { color: colors.text }]}>{consent.label}</Text>
-                {consent.required && (
-                  <View style={[styles.requiredBadge, { backgroundColor: colors.redLight }]}>
-                    <Text style={[styles.requiredText, { color: colors.red }]}>Required</Text>
-                  </View>
-                )}
+                <Text style={[styles.consentLabel, { color: colors.text }]}>{doc.title}</Text>
+                {doc.required && <Badge label="Required" variant="error" size="sm" />}
               </View>
-              <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>{consent.description}</Text>
-              <TouchableOpacity onPress={() => setModalConsent(consent)}>
+              <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
+                Version {doc.version}
+              </Text>
+              <TouchableOpacity onPress={() => openDocument(doc)} accessibilityRole="link">
                 <Text style={[styles.readLink, { color: colors.primary }]}>Read full text →</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
         ))}
 
+        {hasDocuments && (
+          <Pressable
+            style={styles.consentRow}
+            onPress={() => setMarketingOptIn((v) => !v)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: marketingOptIn }}
+            accessibilityLabel="Marketing communications, optional"
+          >
+            <View style={{ marginTop: 2 }}>
+              <Checkbox
+                checked={marketingOptIn}
+                onToggle={() => setMarketingOptIn((v) => !v)}
+                accessibilityLabel="Marketing communications"
+              />
+            </View>
+            <View style={styles.consentContent}>
+              <View style={styles.consentLabelRow}>
+                <Text style={[styles.consentLabel, { color: colors.text }]}>
+                  Marketing communications
+                </Text>
+              </View>
+              <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
+                Receive product updates, personalised offers, and rewards news. You can change this
+                later in your profile.
+              </Text>
+            </View>
+          </Pressable>
+        )}
+
         <TouchableOpacity
           style={[
             styles.primaryBtn,
             { backgroundColor: colors.primary },
-            (!requiredOk || register.loading) && styles.primaryBtnDisabled,
+            submitDisabled && styles.primaryBtnDisabled,
           ]}
           onPress={handleSubmit}
-          disabled={!requiredOk || register.loading}
+          disabled={submitDisabled}
+          accessibilityState={{ disabled: submitDisabled, busy: register.loading }}
         >
           <Text style={styles.primaryBtnText}>
             {register.loading ? 'Sending code…' : 'Agree and continue'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
-
-      <Modal visible={!!modalConsent} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>{modalConsent?.label}</Text>
-            <TouchableOpacity onPress={() => setModalConsent(null)}>
-              <X size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView contentContainerStyle={styles.modalContent}>
-            <Text style={[styles.modalBody, { color: colors.textSecondary }]}>
-              {modalConsent?.description}
-              {'\n\n'}
-              The full document text will be loaded from /legal/documents in a future update.
-            </Text>
-          </ScrollView>
-          <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                if (modalConsent) {
-                  setAccepted((prev) => ({ ...prev, [modalConsent.id]: true }));
-                  setModalConsent(null);
-                }
-              }}
-            >
-              <Text style={styles.primaryBtnText}>Accept</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -296,30 +339,19 @@ const styles = StyleSheet.create({
   backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
   title: { fontSize: 28, fontFamily: 'Inter-Bold', marginBottom: 6, letterSpacing: -0.5 },
   subtitle: { fontSize: 17, fontFamily: 'Inter-Regular', marginBottom: 20, lineHeight: 22 },
-  errorBanner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16 },
+  errorBanner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16, gap: 6 },
   errorBannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
+  retryBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
+  retryText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  loading: { paddingVertical: 24, alignItems: 'center', gap: 8 },
+  loadingText: { fontSize: 15, fontFamily: 'Inter-Regular' },
   consentRow: { flexDirection: 'row', gap: 14, marginBottom: 20, alignItems: 'flex-start' },
   consentContent: { flex: 1, gap: 4 },
   consentLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   consentLabel: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
-  requiredBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  requiredText: { fontSize: 13, fontFamily: 'Inter-SemiBold' },
   consentDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
   readLink: { fontSize: 15, fontFamily: 'Inter-Medium', marginTop: 2 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
-  modalSafe: { flex: 1 },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-  },
-  modalTitle: { fontSize: 20, fontFamily: 'Inter-Bold' },
-  modalContent: { paddingHorizontal: 16, paddingVertical: 20, paddingBottom: 40 },
-  modalBody: { fontSize: 17, fontFamily: 'Inter-Regular', lineHeight: 24 },
-  modalFooter: { paddingHorizontal: 16, paddingVertical: 20, borderTopWidth: 1 },
 });
