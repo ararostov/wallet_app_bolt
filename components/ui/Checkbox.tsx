@@ -1,41 +1,34 @@
-// Accessible checkbox tile with theme support.
-// Used by Consents screen but kept generic.
+// Visual-only checkbox — presentational, doesn't capture touches.
+// Tap handling lives on the parent Pressable that wraps the whole row,
+// which avoids nested-Pressable double-fires and missed events.
+//
+// Theme-aware: uncheched border uses colors.text for full contrast on
+// white / dark backgrounds; checked fills with primary.
 
 import React from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Check } from 'lucide-react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 
 interface CheckboxProps {
   checked: boolean;
-  onToggle: () => void;
+  // Kept for backwards compatibility with existing call sites; tap is now
+  // owned by the parent Pressable so this prop is effectively ignored.
+  onToggle?: () => void;
   disabled?: boolean;
   hasError?: boolean;
   accessibilityLabel?: string;
 }
 
-export function Checkbox({
-  checked,
-  onToggle,
-  disabled = false,
-  hasError = false,
-  accessibilityLabel,
-}: CheckboxProps) {
+export function Checkbox({ checked, hasError = false, disabled }: CheckboxProps) {
   const { colors } = useTheme();
   return (
-    <Pressable
-      onPress={() => {
-        if (!disabled) onToggle();
-      }}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked, disabled }}
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.box,
         {
-          borderColor: hasError ? colors.red : colors.textTertiary,
+          borderColor: hasError ? colors.red : colors.text,
           backgroundColor: 'transparent',
         },
         checked && {
@@ -43,28 +36,21 @@ export function Checkbox({
           borderColor: colors.primary,
         },
         disabled && styles.disabled,
-        pressed && styles.pressed,
       ]}
     >
-      {checked && (
-        <View style={styles.center}>
-          <Check size={14} color="#fff" strokeWidth={3} />
-        </View>
-      )}
-    </Pressable>
+      {checked && <Check size={14} color="#fff" strokeWidth={3} />}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   box: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: 6,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  center: { alignItems: 'center', justifyContent: 'center' },
   disabled: { opacity: 0.5 },
-  pressed: { opacity: 0.8 },
 });
