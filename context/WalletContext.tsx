@@ -14,18 +14,21 @@ import type {
   PaymentMethod,
   Perk,
   Notification,
-  Consent,
   Dispute,
   NotificationSettings,
 } from '../types';
 import type { AuthChannel, AuthUser, WalletSummary } from '../types/auth';
+import type {
+  AccountDeletionStatus,
+  ContactChangeInProgress,
+  ProfileConsent,
+} from '../types/profile';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
   MOCK_PERKS,
   MOCK_FRIENDS,
   MOCK_NOTIFICATIONS,
-  MOCK_CONSENTS,
   MOCK_PAYMENT_METHODS,
 } from '../data/mockData';
 
@@ -77,7 +80,10 @@ interface WalletState {
   referral: ReferralProgram;
   paymentMethods: PaymentMethod[];
   notifications: Notification[];
-  consents: Consent[];
+  consents: ProfileConsent[] | null;
+  marketingOptIn: boolean;
+  contactChangeInProgress: ContactChangeInProgress | null;
+  accountDeletion: AccountDeletionStatus | null;
   disputes: Dispute[];
   notificationSettings: NotificationSettings;
   dismissedBanners: string[];
@@ -109,7 +115,6 @@ type WalletAction =
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
-  | { type: 'UPDATE_CONSENT'; payload: { id: string; accepted: boolean } }
   | { type: 'SUBMIT_DISPUTE'; payload: Dispute }
   | { type: 'UPDATE_NOTIFICATION_SETTINGS'; payload: Partial<NotificationSettings> }
   | { type: 'DISMISS_BANNER'; payload: string }
@@ -122,7 +127,15 @@ type WalletAction =
   | { type: 'AUTH/LOGOUT' }
   | { type: 'AUTH/SET_REFERRAL'; payload: string }
   | { type: 'AUTH/CLEAR_REFERRAL' }
-  | { type: 'AUTH/SET_LAST_ERROR'; payload: string | null };
+  | { type: 'AUTH/SET_LAST_ERROR'; payload: string | null }
+  // --- Profile slice (spec 01-profile) ---
+  | { type: 'CONSENTS/SET'; payload: { documents: ProfileConsent[]; marketingOptIn: boolean } }
+  | { type: 'CONTACT_CHANGE/BEGIN'; payload: ContactChangeInProgress }
+  | { type: 'CONTACT_CHANGE/UPDATE_ATTEMPTS'; payload: { attemptsRemaining: number } }
+  | { type: 'CONTACT_CHANGE/COMPLETE' }
+  | { type: 'CONTACT_CHANGE/ABORT' }
+  | { type: 'ACCOUNT/DELETION_SCHEDULED'; payload: AccountDeletionStatus }
+  | { type: 'ACCOUNT/DELETION_CLEARED' };
 
 const initialWallet: WalletData = {
   balance: 247.5,
@@ -197,7 +210,10 @@ const defaultState: WalletState = {
   referral: initialReferral,
   paymentMethods: MOCK_PAYMENT_METHODS,
   notifications: MOCK_NOTIFICATIONS,
-  consents: MOCK_CONSENTS,
+  consents: null,
+  marketingOptIn: false,
+  contactChangeInProgress: null,
+  accountDeletion: null,
   disputes: [],
   notificationSettings: initialNotificationSettings,
   dismissedBanners: [],
@@ -298,14 +314,6 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
         notifications: state.notifications.filter((n) => n.id !== action.payload),
       };
 
-    case 'UPDATE_CONSENT':
-      return {
-        ...state,
-        consents: state.consents.map((c) =>
-          c.id === action.payload.id ? { ...c, accepted: action.payload.accepted } : c
-        ),
-      };
-
     case 'SUBMIT_DISPUTE':
       return { ...state, disputes: [...state.disputes, action.payload] };
 
@@ -329,6 +337,9 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
         ...defaultState,
         initialized: true,
         pendingReferralCode: state.pendingReferralCode,
+        // Preserve deletion-pending status across logout so the
+        // "Account scheduled for deletion" screen survives sign-out.
+        accountDeletion: state.accountDeletion,
       };
 
     // --- Auth slice ----------------------------------------------------------
@@ -361,6 +372,9 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
         initialized: true,
         // pendingReferralCode survives logout — a deep link may have arrived earlier.
         pendingReferralCode: state.pendingReferralCode,
+        // accountDeletion survives logout so the deletion-pending screen can
+        // still display the schedule (spec 01-profile §5.1).
+        accountDeletion: state.accountDeletion,
       };
 
     case 'AUTH/SET_REFERRAL':
@@ -378,6 +392,39 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     case 'AUTH/SET_LAST_ERROR':
       return { ...state, lastAuthError: action.payload };
+
+    // --- Profile slice ------------------------------------------------------
+
+    case 'CONSENTS/SET':
+      return {
+        ...state,
+        consents: action.payload.documents,
+        marketingOptIn: action.payload.marketingOptIn,
+      };
+
+    case 'CONTACT_CHANGE/BEGIN':
+      return { ...state, contactChangeInProgress: action.payload };
+
+    case 'CONTACT_CHANGE/UPDATE_ATTEMPTS':
+      return {
+        ...state,
+        contactChangeInProgress: state.contactChangeInProgress
+          ? {
+              ...state.contactChangeInProgress,
+              attemptsRemaining: action.payload.attemptsRemaining,
+            }
+          : null,
+      };
+
+    case 'CONTACT_CHANGE/COMPLETE':
+    case 'CONTACT_CHANGE/ABORT':
+      return { ...state, contactChangeInProgress: null };
+
+    case 'ACCOUNT/DELETION_SCHEDULED':
+      return { ...state, accountDeletion: action.payload };
+
+    case 'ACCOUNT/DELETION_CLEARED':
+      return { ...state, accountDeletion: null };
 
     default:
       return state;
@@ -401,7 +448,6 @@ interface WalletContextValue {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   deleteNotification: (id: string) => void;
-  updateConsent: (id: string, accepted: boolean) => void;
   submitDispute: (dispute: Dispute) => void;
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   dismissBanner: (id: string) => void;
@@ -522,10 +568,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'DELETE_NOTIFICATION', payload: id });
   }, []);
 
-  const updateConsent = useCallback((id: string, accepted: boolean) => {
-    dispatch({ type: 'UPDATE_CONSENT', payload: { id, accepted } });
-  }, []);
-
   const submitDispute = useCallback((dispute: Dispute) => {
     dispatch({ type: 'SUBMIT_DISPUTE', payload: dispute });
   }, []);
@@ -572,7 +614,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         markNotificationRead,
         markAllNotificationsRead,
         deleteNotification,
-        updateConsent,
         submitDispute,
         updateNotificationSettings,
         dismissBanner,
@@ -600,11 +641,17 @@ export function useWallet(): WalletContextValue {
 // shape used across screens that haven't migrated yet.
 export function authUserToUser(auth: AuthUser, signupMethod: AuthChannel): User {
   return {
+    id: auth.id,
     firstName: auth.firstName,
     lastName: auth.lastName,
     dob: '',
     email: auth.email ?? '',
     phone: auth.phoneE164 ?? undefined,
+    phoneE164: auth.phoneE164 ?? undefined,
+    emailVerified: auth.emailVerified,
+    phoneVerified: auth.phoneVerified,
+    hasPassword: auth.hasPassword,
+    marketingOptIn: auth.marketingOptIn,
     signupMethod,
   };
 }

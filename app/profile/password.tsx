@@ -1,16 +1,45 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Eye, EyeOff, Check, X } from 'lucide-react-native';
-import { useTheme } from '@/context/ThemeContext';
+// Password screen — wired to PATCH /user/password.
+// Two modes:
+//  - hasPassword=false → "Set a password" (newPassword + confirm only).
+//  - hasPassword=true  → "Change password" (current + newPassword + confirm).
 
-function PasswordInput({ label, value, onChange, colors }: { label: string; value: string; onChange: (v: string) => void; colors: any }) {
+import React, { useState } from 'react';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Check, Eye, EyeOff, X } from 'lucide-react-native';
+
+import { useTheme } from '@/context/ThemeContext';
+import { useWallet } from '@/context/WalletContext';
+import { useChangePassword } from '@/hooks/useChangePassword';
+import { ApiError } from '@/utils/errors';
+import type { ChangePasswordRequest } from '@/types/profile';
+
+interface PasswordInputProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+  error?: string | null;
+}
+
+function PasswordInput({ label, value, onChange, colors, error }: PasswordInputProps) {
   const [show, setShow] = useState(false);
   return (
     <View style={styles.field}>
       <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
-      <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.inputRow, { backgroundColor: colors.surface, borderColor: error ? colors.red : colors.border }]}>
         <TextInput
           style={[styles.input, { color: colors.text }]}
           value={value}
@@ -19,16 +48,23 @@ function PasswordInput({ label, value, onChange, colors }: { label: string; valu
           placeholderTextColor={colors.textTertiary}
           placeholder="Enter password"
           autoCapitalize="none"
+          autoComplete="password"
         />
-        <TouchableOpacity onPress={() => setShow((v) => !v)} style={styles.eyeBtn}>
+        <TouchableOpacity onPress={() => setShow((v) => !v)} style={styles.eyeBtn} accessibilityLabel="Toggle password visibility">
           {show ? <EyeOff size={18} color={colors.textSecondary} /> : <Eye size={18} color={colors.textSecondary} />}
         </TouchableOpacity>
       </View>
+      {error && <Text style={[styles.errorText, { color: colors.red }]}>{error}</Text>}
     </View>
   );
 }
 
-function StrengthMeter({ password, colors }: { password: string; colors: any }) {
+interface StrengthMeterProps {
+  password: string;
+  colors: ReturnType<typeof useTheme>['colors'];
+}
+
+function StrengthMeter({ password, colors }: StrengthMeterProps) {
   const checks = [
     { label: '8+ characters', pass: password.length >= 8 },
     { label: 'Uppercase letter', pass: /[A-Z]/.test(password) },
@@ -53,7 +89,7 @@ function StrengthMeter({ password, colors }: { password: string; colors: any }) 
         {checks.map(({ label, pass }) => (
           <View key={label} style={styles.ruleRow}>
             {pass ? <Check size={14} color={colors.green} /> : <X size={14} color={colors.textTertiary} />}
-            <Text style={[styles.ruleText, { color: colors.textTertiary }, pass && { color: colors.green }]}>{label}</Text>
+            <Text style={[styles.ruleText, { color: pass ? colors.green : colors.textTertiary }]}>{label}</Text>
           </View>
         ))}
       </View>
@@ -61,49 +97,145 @@ function StrengthMeter({ password, colors }: { password: string; colors: any }) 
   );
 }
 
+function isStrongPasswordStrict(value: string): boolean {
+  return (
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[0-9]/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+  );
+}
+
 export default function PasswordScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
+  const { state } = useWallet();
+  const change = useChangePassword();
+
+  const hasPassword = state.user?.hasPassword ?? false;
+
   const [current, setCurrent] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [currentError, setCurrentError] = useState<string | null>(null);
+  const [newError, setNewError] = useState<string | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const mismatch = confirm.length > 0 && newPass !== confirm;
-  const isValid = current.length > 0 && newPass.length >= 8 && newPass === confirm;
+  const isValid =
+    isStrongPasswordStrict(newPass) &&
+    newPass === confirm &&
+    (!hasPassword || current.length >= 1);
 
-  const handleSave = () => {
-    if (current !== 'password123') {
-      Alert.alert('Wrong password', 'The current password you entered is incorrect.');
+  const handleSave = async () => {
+    setCurrentError(null);
+    setNewError(null);
+    setConfirmError(null);
+
+    if (!isStrongPasswordStrict(newPass)) {
+      setNewError('Use at least 8 characters with an uppercase letter, digit and special character.');
       return;
     }
-    Alert.alert('Password changed', 'Your password has been updated successfully.');
-    router.back();
+    if (mismatch) {
+      setConfirmError("Passwords don't match.");
+      return;
+    }
+
+    const payload: ChangePasswordRequest = { newPassword: newPass };
+    if (hasPassword) payload.currentPassword = current;
+
+    try {
+      const result = await change.mutate(payload);
+      const otherSessions = result.otherSessionsRevoked ?? 0;
+      const message = hasPassword
+        ? otherSessions > 0
+          ? `Password updated. ${otherSessions} other ${otherSessions === 1 ? 'session' : 'sessions'} signed out.`
+          : 'Password updated.'
+        : 'Password set successfully.';
+      Alert.alert('Done', message);
+      router.back();
+    } catch (e) {
+      if (e instanceof ApiError) {
+        if (e.code === 'INVALID_CURRENT_PASSWORD') {
+          setCurrentError('The current password is incorrect.');
+          return;
+        }
+        if (e.code === 'WEAK_PASSWORD') {
+          setNewError('Password is too weak. Please follow the strength rules.');
+          return;
+        }
+        if (e.code === 'PASSWORD_SAME_AS_CURRENT') {
+          setNewError('New password must be different from the current one.');
+          return;
+        }
+        Alert.alert('Could not change password', e.message);
+        return;
+      }
+      Alert.alert('Could not change password', 'Please try again.');
+    }
   };
 
   return (
     <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Back" accessibilityRole="button">
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Change password</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {hasPassword ? 'Change password' : 'Set a password'}
+        </Text>
         <View style={{ width: 36 }} />
       </View>
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
-        <PasswordInput label="Current password" value={current} onChange={setCurrent} colors={colors} />
-        <PasswordInput label="New password" value={newPass} onChange={setNewPass} colors={colors} />
+        <Text style={[styles.intro, { color: colors.textSecondary }]}>
+          {hasPassword
+            ? "Choose a strong password. We'll sign out your other sessions when you save."
+            : 'Add a password to your account for extra security.'}
+        </Text>
+
+        {hasPassword && (
+          <PasswordInput
+            label="Current password"
+            value={current}
+            onChange={setCurrent}
+            colors={colors}
+            error={currentError}
+          />
+        )}
+        <PasswordInput
+          label="New password"
+          value={newPass}
+          onChange={setNewPass}
+          colors={colors}
+          error={newError}
+        />
         {newPass.length > 0 && <StrengthMeter password={newPass} colors={colors} />}
-        <PasswordInput label="Confirm new password" value={confirm} onChange={setConfirm} colors={colors} />
-        {mismatch && <Text style={[styles.errorText, { color: colors.red }]}>Passwords don't match</Text>}
+        <PasswordInput
+          label="Confirm new password"
+          value={confirm}
+          onChange={setConfirm}
+          colors={colors}
+          error={confirmError ?? (mismatch ? "Passwords don't match" : null)}
+        />
 
         <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: colors.primary }, !isValid && styles.primaryBtnDisabled]}
+          style={[
+            styles.primaryBtn,
+            { backgroundColor: colors.primary },
+            (!isValid || change.loading) && styles.primaryBtnDisabled,
+          ]}
           onPress={handleSave}
-          disabled={!isValid}
+          disabled={!isValid || change.loading}
         >
-          <Text style={styles.primaryBtnText}>Save password</Text>
+          <Text style={styles.primaryBtnText}>
+            {change.loading
+              ? 'Saving...'
+              : hasPassword
+                ? 'Save password'
+                : 'Set password'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -116,19 +248,20 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 19, fontFamily: 'Inter-SemiBold' },
   scroll: { padding: 16, paddingBottom: 80 },
+  intro: { fontSize: 15, fontFamily: 'Inter-Regular', marginBottom: 16, lineHeight: 20 },
   field: { marginBottom: 16 },
   label: { fontSize: 15, fontFamily: 'Inter-SemiBold', marginBottom: 6 },
   inputRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: 12 },
   input: { flex: 1, paddingHorizontal: 16, paddingVertical: 14, fontSize: 17, fontFamily: 'Inter-Regular' },
   eyeBtn: { paddingRight: 14 },
+  errorText: { fontSize: 13, fontFamily: 'Inter-Regular', marginTop: 6 },
   strengthContainer: { marginBottom: 16, gap: 8 },
   strengthBars: { flexDirection: 'row', gap: 4 },
   strengthBar: { flex: 1, height: 4, borderRadius: 2 },
-  strengthLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  strengthLabel: { fontSize: 14, fontFamily: 'Inter-SemiBold' },
   rules: { gap: 6 },
   ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ruleText: { fontSize: 15, fontFamily: 'Inter-Regular' },
-  errorText: { fontSize: 15, marginBottom: 8, fontFamily: 'Inter-Regular' },
+  ruleText: { fontSize: 14, fontFamily: 'Inter-Regular' },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },

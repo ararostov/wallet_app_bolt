@@ -1,9 +1,16 @@
 export interface User {
+  id?: string;
   firstName: string;
   lastName: string;
   dob: string;
   email: string;
   phone?: string;
+  phoneE164?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
+  hasPassword?: boolean;
+  hasDateOfBirth?: boolean;
+  marketingOptIn?: boolean;
   referralCode?: string;
   signupMethod: 'phone' | 'email';
 }

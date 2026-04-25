@@ -76,6 +76,22 @@ const ERROR_MESSAGES: Record<string, string> = {
   CUSTOMER_BLOCKED: 'Your account has been blocked. Please contact support.',
   CUSTOMER_CLOSED: 'This account has been closed.',
 
+  // Profile (01-profile)
+  DATE_OF_BIRTH_ALREADY_SET:
+    'Your date of birth cannot be changed. Contact support for assistance.',
+  MANDATORY_CONSENT_REQUIRED: 'This consent is required to use the service.',
+  LEGAL_DOCUMENT_NOT_FOUND: 'This document is no longer available.',
+  ACCOUNT_DELETION_ALREADY_REQUESTED:
+    'Your account is already scheduled for deletion.',
+  ACCOUNT_HAS_POSITIVE_BALANCE:
+    'Withdraw your balance before deleting your account.',
+  ACCOUNT_HAS_ACTIVE_CARD:
+    'Freeze and close your card before deleting your account.',
+  CONTACT_CHANGE_ALREADY_PENDING:
+    'You already have a pending contact change. Finish or cancel it first.',
+  CONTACT_IDENTIFIER_ALREADY_TAKEN: 'This address is already in use.',
+  CONTACT_IDENTIFIER_SAME_AS_CURRENT: 'Enter a different value.',
+
   // Wallet
   BALANCE_CEILING_EXCEEDED: 'Top-up exceeds your balance limit.',
   TOPUP_DAILY_LIMIT_EXCEEDED: 'Daily top-up limit reached.',

@@ -4,7 +4,6 @@ import type {
   Perk,
   Friend,
   Notification,
-  Consent,
   PaymentMethod,
 } from '../types';
 
@@ -391,58 +390,6 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     date: '2026-04-07T09:00:00Z',
     actionLabel: 'View tier',
     actionRoute: '/tier',
-  },
-];
-
-export const MOCK_CONSENTS: Consent[] = [
-  {
-    id: 'consent_001',
-    label: 'Terms & Conditions',
-    description: 'I agree to the Terms and Conditions governing the use of the wallet service.',
-    required: true,
-    accepted: true,
-  },
-  {
-    id: 'consent_002',
-    label: 'Privacy Policy',
-    description: 'I have read and accept the Privacy Policy, including data processing practices.',
-    required: true,
-    accepted: true,
-  },
-  {
-    id: 'consent_003',
-    label: 'Age Confirmation',
-    description: 'I confirm I am 18 years of age or older.',
-    required: true,
-    accepted: true,
-  },
-  {
-    id: 'consent_004',
-    label: 'Marketing Emails',
-    description: 'Send me product updates, promotions, and personalised offers via email.',
-    required: false,
-    accepted: true,
-  },
-  {
-    id: 'consent_005',
-    label: 'Push Notifications',
-    description: 'Send me promotional push notifications about rewards and offers.',
-    required: false,
-    accepted: false,
-  },
-  {
-    id: 'consent_006',
-    label: 'SMS Marketing',
-    description: 'Send me promotional SMS messages about wallet features.',
-    required: false,
-    accepted: true,
-  },
-  {
-    id: 'consent_007',
-    label: 'Analytics & Research',
-    description: 'Allow anonymised usage data to improve our products and services.',
-    required: false,
-    accepted: false,
   },
 ];
 

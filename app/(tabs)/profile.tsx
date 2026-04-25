@@ -6,13 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon } from 'lucide-react-native';
+import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLogout } from '@/hooks/useLogout';
+import { formatDate } from '@/utils/format';
 
 interface SettingsGroup {
   title: string;
@@ -33,12 +35,13 @@ const RED = '#ef4444';
 const RED_BG = '#fef2f2';
 const RED_BG_DARK = '#7F1D1D';
 
-const SETTINGS_GROUPS: SettingsGroup[] = [
+function buildSettingsGroups(hasPassword: boolean): SettingsGroup[] {
+  return [
   {
     title: 'Account',
     items: [
       { icon: User, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Personal info', route: '/profile/personal' },
-      { icon: Lock, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Change password', route: '/profile/password' },
+      { icon: Lock, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: hasPassword ? 'Change password' : 'Set password', route: '/profile/password' },
       { icon: FileText, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Consents', route: '/profile/consents' },
       { icon: Trash2, iconColor: RED, iconBg: RED_BG, iconBgDark: RED_BG_DARK, label: 'Delete account', route: '/profile/delete-account' },
     ],
@@ -81,6 +84,7 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
     ],
   },
 ];
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -88,13 +92,29 @@ export default function ProfileScreen() {
   const { state } = useWallet();
   const { logout, loading: logoutLoading } = useLogout();
   const { colors, isDark, toggleTheme } = useTheme();
-  const { user, tier } = state;
+  const { user, tier, accountDeletion } = state;
 
   const initials = user
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : 'AJ';
-  const fullName = user ? `${user.firstName} ${user.lastName}` : 'Alex Johnson';
-  const email = user?.email ?? 'alex@example.com';
+    ? `${(user.firstName[0] ?? '').toUpperCase()}${(user.lastName[0] ?? '').toUpperCase()}` || 'U'
+    : 'U';
+  const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : '';
+  const email = user?.email ?? user?.phone ?? '';
+  const groups = React.useMemo(
+    () => buildSettingsGroups(user?.hasPassword ?? false),
+    [user?.hasPassword],
+  );
+
+  const openSupportMail = React.useCallback(() => {
+    const supportEmail = accountDeletion?.supportEmail;
+    if (!supportEmail) return;
+    const subject = encodeURIComponent('Restore account');
+    const body = encodeURIComponent(
+      user?.id ? `Customer ID: ${user.id}` : 'Please restore my account.',
+    );
+    Linking.openURL(`mailto:${supportEmail}?subject=${subject}&body=${body}`).catch(
+      () => undefined,
+    );
+  }, [accountDeletion?.supportEmail, user?.id]);
 
   return (
     <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
@@ -106,6 +126,30 @@ export default function ProfileScreen() {
           <Text style={[styles.screenTitle, { color: colors.text }]}>Profile</Text>
           <View style={styles.headerSpacer} />
         </View>
+
+        {accountDeletion && accountDeletion.status === 'pending' && (
+          <View style={[styles.deletionBanner, { backgroundColor: colors.redLight }]}>
+            <AlertTriangle size={18} color={colors.red} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.deletionTitle, { color: colors.red }]}>
+                Account scheduled for deletion
+              </Text>
+              <Text style={[styles.deletionDesc, { color: colors.red }]}>
+                {`Your account will be permanently deleted on ${formatDate(
+                  accountDeletion.scheduledFor,
+                  'long',
+                )}.`}
+              </Text>
+              {accountDeletion.supportEmail && (
+                <TouchableOpacity onPress={openSupportMail} style={styles.deletionAction}>
+                  <Text style={[styles.deletionActionText, { color: colors.red }]}>
+                    Contact support to restore
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity style={[styles.avatarCard, { backgroundColor: colors.surface }]} onPress={() => router.push('/profile/personal')}>
           <View style={styles.avatar}>
@@ -121,7 +165,7 @@ export default function ProfileScreen() {
           <ChevronRight size={16} color={colors.textTertiary} />
         </TouchableOpacity>
 
-        {SETTINGS_GROUPS.map((group) => (
+        {groups.map((group) => (
           <View key={group.title} style={styles.group}>
             <Text style={[styles.groupTitle, { color: colors.textTertiary }]}>{group.title}</Text>
             <View style={[styles.groupCard, { backgroundColor: colors.surface }]}>
@@ -230,4 +274,17 @@ const styles = StyleSheet.create({
   version: { textAlign: 'center', fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 8, marginBottom: 16 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
   logoutText: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
+  deletionBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginHorizontal: 16,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  deletionTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  deletionDesc: { fontSize: 14, fontFamily: 'Inter-Regular', marginTop: 2 },
+  deletionAction: { marginTop: 6 },
+  deletionActionText: { fontSize: 14, fontFamily: 'Inter-SemiBold', textDecorationLine: 'underline' },
 });
