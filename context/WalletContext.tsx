@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useReducer, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthEvents } from '../utils/authEvents';
 import { setReferralDeepLinkListener } from '../utils/deepLinks';
+import { SignupDraftStorage } from '../utils/signupDraftStorage';
+import { isOtpWindowExpired, isSignupDraftEmpty } from '../utils/signupDraft';
 import type { AuthChannel, AuthUser, WalletSummary } from '../types/auth';
 import type {
   AccountDeletionStatus,
@@ -768,9 +770,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored) as Partial<WalletState>;
-          // Don't restore signupDraft from disk — it's intentionally not persisted.
+          // Don't restore signupDraft from AsyncStorage — it never lives there
+          // (excluded by buildPersistPayload). The encrypted SecureStore copy
+          // is loaded below.
           const { signupDraft: _ignore, ...rest } = parsed;
           dispatch({ type: 'HYDRATE', payload: rest });
+        }
+        // Encrypted signup-draft hydration. Wipe-and-skip when the OTP
+        // window has lapsed — the original code is unusable anyway and the
+        // associated `pendingCustomerId` ties the user to a now-stale
+        // backend record.
+        const draft = await SignupDraftStorage.get();
+        if (draft) {
+          if (isOtpWindowExpired(draft)) {
+            await SignupDraftStorage.clear();
+          } else {
+            dispatch({ type: 'AUTH/UPDATE_DRAFT', payload: draft });
+          }
         }
       } catch {
       } finally {
@@ -785,10 +801,39 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toStore)).catch(() => {});
   }, [state]);
 
+  // Persist signupDraft to SecureStore on change. Debounced ~300ms so
+  // typing in the signup form doesn't hammer the keystore.
+  // - Empty draft (structurally equal to initialSignupDraft) → clear.
+  //   This is the cleanest place to handle AUTH/LOGIN_SUCCESS, AUTH/LOGOUT,
+  //   AUTH/RESET_DRAFT — all of them collapse the slice to initial.
+  // - Non-empty draft → write the JSON blob.
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!state.initialized) return;
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current);
+    }
+    const draft = state.signupDraft;
+    persistTimerRef.current = setTimeout(() => {
+      if (isSignupDraftEmpty(draft)) {
+        SignupDraftStorage.clear().catch(() => undefined);
+      } else {
+        SignupDraftStorage.set(draft).catch(() => undefined);
+      }
+    }, 300);
+    return () => {
+      if (persistTimerRef.current) {
+        clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+    };
+  }, [state.signupDraft, state.initialized]);
+
   // Listen for forced-logout signals from the API interceptor (refresh failure).
   useEffect(() => {
     const unsubscribe = AuthEvents.on('logout', () => {
       AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+      SignupDraftStorage.clear().catch(() => undefined);
       dispatch({ type: 'AUTH/LOGOUT' });
     });
     return unsubscribe;
@@ -819,6 +864,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+    SignupDraftStorage.clear().catch(() => undefined);
     dispatch({ type: 'AUTH/LOGOUT' });
   }, []);
 

@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useWallet } from '@/context/WalletContext';
 import { authApi } from '@/utils/api/auth';
 import { TokenStorage } from '@/utils/tokens';
+import { SignupDraftStorage } from '@/utils/signupDraftStorage';
 import { revokePushToken } from '@/utils/push';
 import { logEvent } from '@/utils/logger';
 
@@ -22,6 +23,7 @@ export function useLogout() {
     try {
       await authApi.logout(); // already swallows errors
       await TokenStorage.clear();
+      await SignupDraftStorage.clear();
       await AsyncStorage.removeItem(STORAGE_KEY);
       revokePushToken().catch(() => undefined);
       dispatch({ type: 'AUTH/LOGOUT' });

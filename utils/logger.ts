@@ -22,6 +22,13 @@ const SENSITIVE_KEYS = new Set<string>([
   'pspSessionId',
   'trueLayerAccountId',
   'authorization',
+  // PII fields persisted in the encrypted signup draft. `email` is left
+  // unmasked because half the auth/profile telemetry keys off it; the rest
+  // are unambiguous personal data and should never appear in logs.
+  'firstName',
+  'lastName',
+  'dateOfBirth',
+  'phoneE164',
 ]);
 
 function sanitize(value: unknown, depth = 0): unknown {

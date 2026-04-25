@@ -11,6 +11,7 @@ import { TokenStorage } from '@/utils/tokens';
 import { meApi } from '@/utils/api/me';
 import { ApiError } from '@/utils/errors';
 import { logError } from '@/utils/logger';
+import { selectSignupResumeRoute } from '@/utils/signupDraft';
 import type { AuthChannel } from '@/types/auth';
 
 export default function Index() {
@@ -57,10 +58,25 @@ export default function Index() {
     if (!state.initialized || !hydrated) return;
     if (state.onboardingComplete && state.user) {
       router.replace('/(tabs)');
-    } else {
-      router.replace('/(onboarding)/intro');
+      return;
     }
-  }, [state.initialized, hydrated, state.onboardingComplete, state.user, router]);
+    // No active session: if a hydrated signup draft exists, jump straight
+    // to the step the user can resume on. Avoids re-typing PII after a
+    // force-close between /auth/register and /auth/verify-registration.
+    const resume = selectSignupResumeRoute(state.signupDraft);
+    if (resume) {
+      router.replace(resume);
+      return;
+    }
+    router.replace('/(onboarding)/intro');
+  }, [
+    state.initialized,
+    hydrated,
+    state.onboardingComplete,
+    state.user,
+    state.signupDraft,
+    router,
+  ]);
 
   return (
     <View style={styles.container}>
