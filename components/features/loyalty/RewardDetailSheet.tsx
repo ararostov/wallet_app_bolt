@@ -24,6 +24,7 @@ import { useRouter } from 'expo-router';
 import { ExternalLink, X } from 'lucide-react-native';
 
 import { Button } from '@/components/ui/Button';
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useClaimReward } from '@/hooks/useClaimReward';
 import { useReward } from '@/hooks/useReward';
@@ -71,8 +72,8 @@ export function RewardDetailSheet({
   const handleClaim = async (id: string): Promise<void> => {
     try {
       await claim.mutate({ rewardId: id });
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Reward claimed', 'Credited to your wallet.');
+      // toast.show fires the success haptic itself
+      toast.show({ message: 'Reward claimed', variant: 'success' });
       onClose();
     } catch (e) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

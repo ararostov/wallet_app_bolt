@@ -37,6 +37,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useGenerateReferralCode } from '@/hooks/useGenerateReferralCode';
 import { useReferralFriends } from '@/hooks/useReferralFriends';
@@ -150,7 +151,7 @@ export default function ReferralScreen() {
     try {
       await Clipboard.setStringAsync(code);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Alert.alert('Copied', `Code ${code} copied to clipboard.`);
+      toast.show({ message: `Code ${code} copied`, variant: 'success' });
     } catch {
       // best-effort
     }
@@ -182,7 +183,10 @@ export default function ReferralScreen() {
                 Haptics.NotificationFeedbackType.Success,
               );
               await summaryQuery.refetch();
-              Alert.alert('New code', `Your new code is ${result.code}.`);
+              toast.show({
+                message: `New code: ${result.code}`,
+                variant: 'success',
+              });
             } catch (e) {
               const message =
                 e instanceof ApiError
@@ -790,12 +794,12 @@ function InviteModal({
       );
       onAfterSubmit();
       const masked = result.invite.contactMasked ?? 'your friend';
-      Alert.alert(
-        result.duplicate ? 'Already invited' : 'Invite sent',
-        result.duplicate
-          ? `You've already invited ${masked}.`
-          : `Invite sent to ${masked}.`,
-      );
+      toast.show({
+        message: result.duplicate
+          ? `Already invited ${masked}`
+          : `Invite sent to ${masked}`,
+        variant: result.duplicate ? 'info' : 'success',
+      });
       handleClose();
     } catch (e) {
       const message =

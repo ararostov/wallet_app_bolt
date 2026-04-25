@@ -23,6 +23,7 @@ import { ArrowLeft, Check, Eye, EyeOff, X } from 'lucide-react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { useChangePassword } from '@/hooks/useChangePassword';
+import { toast } from '@/components/ui/Toast';
 import { ApiError } from '@/utils/errors';
 import type { ChangePasswordRequest } from '@/types/profile';
 
@@ -151,9 +152,9 @@ export default function PasswordScreen() {
       const message = hasPassword
         ? otherSessions > 0
           ? `Password updated. ${otherSessions} other ${otherSessions === 1 ? 'session' : 'sessions'} signed out.`
-          : 'Password updated.'
-        : 'Password set successfully.';
-      Alert.alert('Done', message);
+          : 'Password updated'
+        : 'Password set';
+      toast.show({ message, variant: 'success' });
       router.back();
     } catch (e) {
       if (e instanceof ApiError) {

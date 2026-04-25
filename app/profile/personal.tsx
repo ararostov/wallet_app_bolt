@@ -25,6 +25,7 @@ import { useWallet } from '@/context/WalletContext';
 import { useQuery } from '@/hooks/useQuery';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
 import { profileApi } from '@/utils/api/profile';
+import { toast } from '@/components/ui/Toast';
 import { ApiError } from '@/utils/errors';
 import { formatDate, formatPhoneE164 } from '@/utils/format';
 import type { UpdateProfileRequest, UserProfile } from '@/types/profile';
@@ -115,7 +116,7 @@ export default function PersonalInfoScreen() {
 
     try {
       await update.mutate(payload);
-      Alert.alert('Saved', 'Your personal info has been updated.');
+      toast.show({ message: 'Saved', variant: 'success' });
       router.back();
     } catch (e) {
       const message =

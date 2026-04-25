@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { WalletProvider, useWallet } from '@/context/WalletContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ToastProvider } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { handleActionRoute, handleDeepLink } from '@/utils/deepLinks';
 import {
@@ -178,7 +179,9 @@ export default function RootLayout() {
       <GestureHandlerRootView style={styles.root}>
         <ThemeProvider>
           <WalletProvider>
-            <AppContent />
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
           </WalletProvider>
         </ThemeProvider>
       </GestureHandlerRootView>

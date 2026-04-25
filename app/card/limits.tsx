@@ -26,6 +26,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { useUpdateCardLimits } from '@/hooks/useUpdateCardLimits';
@@ -154,7 +155,7 @@ export default function CardLimitsScreen() {
             ? null
             : { amountMinor: monthlyMinor, currency },
       });
-      Alert.alert('Limits updated', 'Your card limits have been saved.');
+      toast.show({ message: 'Limits updated', variant: 'success' });
       router.back();
     } catch (e) {
       if (e instanceof ApiError) {

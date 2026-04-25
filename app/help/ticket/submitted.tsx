@@ -4,7 +4,6 @@
 
 import React from 'react';
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CircleCheck as CheckCircle } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 
 export default function TicketSubmittedScreen() {
@@ -27,7 +27,7 @@ export default function TicketSubmittedScreen() {
   const copyReference = async () => {
     if (!reference) return;
     await Clipboard.setStringAsync(reference);
-    Alert.alert('Copied', 'Ticket reference copied to clipboard.');
+    toast.show({ message: 'Ticket reference copied', variant: 'success' });
   };
 
   return (

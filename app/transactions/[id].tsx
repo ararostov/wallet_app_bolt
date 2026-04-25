@@ -20,6 +20,7 @@ import {
 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useTransaction } from '@/hooks/useTransaction';
 import type { TransactionRecord, TransactionStatus } from '@/types/transactions';
@@ -153,7 +154,7 @@ export default function TransactionDetailScreen() {
   const copyReference = async () => {
     if (!tx.reference) return;
     await Clipboard.setStringAsync(tx.reference);
-    Alert.alert('Copied', 'Reference copied to clipboard');
+    toast.show({ message: 'Reference copied', variant: 'success' });
   };
 
   return (

@@ -18,6 +18,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { OtpInput } from '@/components/ui/OtpInput';
+import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { useOtpCountdown } from '@/hooks/useOtpCountdown';
@@ -58,7 +59,7 @@ export default function EmailChangeOtpScreen() {
     try {
       await verify.mutate({ code: value });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      Alert.alert('Email updated', 'Your email has been changed.');
+      toast.show({ message: 'Email updated', variant: 'success' });
       router.replace('/profile/personal');
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined);
