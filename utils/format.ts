@@ -238,6 +238,44 @@ export function groupTransactionsByDate<T extends DatedItem>(
   return Object.entries(groups).map(([date, items]) => ({ date, items }));
 }
 
+// Variant of groupTransactionsByDate that operates on the API-shape
+// `TransactionRecord` (uses `occurredAt` instead of `date`). Bucket labels
+// match the spec §4.1: Today, Yesterday, "This week" (day-of-week), then
+// "DD MMMM YYYY" for older rows. Order is preserved (input is already sorted
+// `occurredAt DESC`).
+export function groupTransactionsByOccurredAt<T extends { occurredAt: string }>(
+  transactions: T[],
+): { key: string; items: T[] }[] {
+  const buckets: { key: string; items: T[] }[] = [];
+  const indexByKey = new Map<string, number>();
+  // Lazy import via require to avoid pulling date-fns into bundles for
+  // screens that don't use this helper. date-fns is tree-shakeable so the
+  // explicit import here is fine in practice.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+  const { isToday, isYesterday, isThisWeek, format } = require('date-fns') as {
+    isToday: (d: Date) => boolean;
+    isYesterday: (d: Date) => boolean;
+    isThisWeek: (d: Date, options?: { weekStartsOn?: number }) => boolean;
+    format: (d: Date, fmt: string) => string;
+  };
+  for (const tx of transactions) {
+    const d = new Date(tx.occurredAt);
+    let key: string;
+    if (isToday(d)) key = 'Today';
+    else if (isYesterday(d)) key = 'Yesterday';
+    else if (isThisWeek(d, { weekStartsOn: 1 })) key = format(d, 'EEEE');
+    else key = format(d, 'd MMMM yyyy');
+    const idx = indexByKey.get(key);
+    if (idx !== undefined) {
+      buckets[idx].items.push(tx);
+    } else {
+      indexByKey.set(key, buckets.length);
+      buckets.push({ key, items: [tx] });
+    }
+  }
+  return buckets;
+}
+
 export function relativeTime(iso: string): string {
   const d = new Date(iso);
   const now = new Date();

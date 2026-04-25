@@ -37,20 +37,16 @@ import type {
 } from '../types/card';
 import type { MoneyAmount } from '../types/auth';
 import type { PaymentMethod as ApiPaymentMethod } from '../types/paymentMethods';
+import type {
+  DisputeRecord,
+  TransactionRecord,
+} from '../types/transactions';
 
-// Lightweight backend-shape transaction record — kept loose because spec 06
-// owns the canonical type. Stored in `transactionsApi` so the home / receipt
-// flows can find a topup transaction by paymentOrderId once backend starts
-// returning one in the topup payload.
-export interface ApiTransactionRecord {
-  id: string;
-  type: 'topup' | 'purchase' | 'cashback' | 'bonus' | 'refund';
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
-  amount: { amountMinor: number; currency: string };
-  occurredAt: string;
-  reference?: string | null;
-  paymentOrderId?: string | null;
-}
+// Re-export the canonical transaction record under its legacy alias so
+// existing call sites that imported ApiTransactionRecord from this module
+// keep compiling without a churn-y rename. Spec 06 owns the canonical shape
+// (types/transactions.ts).
+export type { TransactionRecord as ApiTransactionRecord } from '../types/transactions';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -135,11 +131,14 @@ interface WalletState {
   // currently mock-shaped); reducer keeps both in sync only via dedicated
   // PAYMENT_METHODS/* actions, never automatically.
   paymentMethodsApi: ApiPaymentMethod[] | null;
-  // Backend-shape transactions slice (forward-compat for spec 06). Stays
-  // null until either spec 06 lands or the topup status payload starts
-  // carrying a linked transaction. Coexists with the legacy `transactions`
-  // mock slice; the two are NEVER kept in sync automatically.
-  transactionsApi: ApiTransactionRecord[] | null;
+  // Backend-shape transactions slice (spec 06). Materialised feed (page 1
+  // worth) used by the home recent-transactions widget after the list screen
+  // has been visited at least once. Coexists with the legacy `transactions`
+  // mock slice — kept in sync only via TRANSACTIONS/* dispatches.
+  transactionsApi: TransactionRecord[] | null;
+  // Disputes keyed by transactionId. Hydrated from POST /report (full record)
+  // and from GET /transactions/:id (summary promoted to a partial record).
+  disputesApi: Record<string, DisputeRecord>;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -187,14 +186,19 @@ type WalletAction =
   | { type: 'PAYMENT_METHODS/UPSERT_API'; payload: ApiPaymentMethod }
   | { type: 'PAYMENT_METHODS/REMOVE_API'; payload: { id: string } }
   | { type: 'PAYMENT_METHODS/SET_DEFAULT_API'; payload: { id: string } }
-  // --- Transactions slice (spec 05-topup / 06-transactions) backend-shape
-  // Backend-shape transaction record. Spec 06 will define the rich
-  // `Transaction` resource; spec 05 only emits this when backend returns a
-  // linked transaction in the topup status payload (currently it does not —
-  // see open question §10 of 05-topup). The action is wired now so result.tsx
-  // can pick it up the moment backend starts returning it without a reducer
-  // change.
-  | { type: 'TRANSACTIONS/UPSERT_API'; payload: ApiTransactionRecord }
+  // --- Transactions slice (spec 06-transactions) backend-shape -----------
+  // SET_API replaces the materialised list (used after a fresh page-1 read).
+  // APPEND_API extends the materialised list with a paged result (de-duped by
+  // id). UPSERT_API replaces or prepends a single row (already used by spec
+  // 05-topup; carried forward unchanged).
+  | { type: 'TRANSACTIONS/SET_API'; payload: { items: TransactionRecord[] } }
+  | { type: 'TRANSACTIONS/APPEND_API'; payload: { items: TransactionRecord[] } }
+  | { type: 'TRANSACTIONS/UPSERT_API'; payload: TransactionRecord }
+  | { type: 'TRANSACTIONS/CLEAR_API' }
+  // --- Disputes slice (spec 06) -----------------------------------------
+  | { type: 'DISPUTES/UPSERT'; payload: DisputeRecord }
+  | { type: 'DISPUTES/SET_FOR_TRANSACTION'; payload: DisputeRecord }
+  | { type: 'DISPUTES/CLEAR' }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -300,6 +304,7 @@ const defaultState: WalletState = {
   autoReloadApi: null,
   paymentMethodsApi: null,
   transactionsApi: null,
+  disputesApi: {},
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -665,6 +670,16 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     // --- Transactions slice (spec 05/06) ----------------------------------
 
+    case 'TRANSACTIONS/SET_API':
+      return { ...state, transactionsApi: action.payload.items };
+
+    case 'TRANSACTIONS/APPEND_API': {
+      const current = state.transactionsApi ?? [];
+      const known = new Set(current.map((t) => t.id));
+      const fresh = action.payload.items.filter((t) => !known.has(t.id));
+      return { ...state, transactionsApi: [...current, ...fresh] };
+    }
+
     case 'TRANSACTIONS/UPSERT_API': {
       const incoming = action.payload;
       const current = state.transactionsApi ?? [];
@@ -675,6 +690,23 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
           : [incoming, ...current];
       return { ...state, transactionsApi: next };
     }
+
+    case 'TRANSACTIONS/CLEAR_API':
+      return { ...state, transactionsApi: null };
+
+    // --- Disputes slice (spec 06) -----------------------------------------
+
+    case 'DISPUTES/UPSERT':
+    case 'DISPUTES/SET_FOR_TRANSACTION': {
+      const incoming = action.payload;
+      return {
+        ...state,
+        disputesApi: { ...state.disputesApi, [incoming.transactionId]: incoming },
+      };
+    }
+
+    case 'DISPUTES/CLEAR':
+      return { ...state, disputesApi: {} };
 
     default:
       return state;

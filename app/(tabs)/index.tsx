@@ -47,9 +47,48 @@ export default function HomeScreen() {
 
   const query = useWalletState();
 
-  const { user, walletApi, cardApi, tierApi, autoReloadApi, transactions, dismissedBanners } = state;
+  const { user, walletApi, cardApi, tierApi, autoReloadApi, transactions, transactionsApi, dismissedBanners } = state;
 
-  const recentTxs = transactions.slice(0, 5);
+  // Prefer the spec-06 backend-shape feed (state.transactionsApi) when it has
+  // been hydrated by the transactions list screen. Until then fall back to
+  // the legacy mock-shape `transactions` slice so the home widget keeps
+  // rendering without a round-trip.
+  type RecentTx =
+    | {
+        kind: 'api';
+        id: string;
+        type: 'topup' | 'auto_reload' | 'purchase' | 'cashback' | 'bonus' | 'refund';
+        merchant: string | null;
+        date: string;
+        amountMinor: number;
+        currency: string;
+      }
+    | {
+        kind: 'legacy';
+        id: string;
+        type: 'topup' | 'purchase' | 'cashback' | 'bonus' | 'refund';
+        merchant: string | undefined;
+        date: string;
+        amount: number;
+      };
+  const recentTxs: RecentTx[] = transactionsApi
+    ? transactionsApi.slice(0, 5).map((t) => ({
+        kind: 'api',
+        id: t.id,
+        type: t.type,
+        merchant: t.merchantName,
+        date: t.occurredAt,
+        amountMinor: t.amount.amountMinor,
+        currency: t.amount.currency,
+      }))
+    : transactions.slice(0, 5).map((t) => ({
+        kind: 'legacy',
+        id: t.id,
+        type: t.type,
+        merchant: t.merchant,
+        date: t.date,
+        amount: t.amount,
+      }));
   const firstName = user?.firstName ?? 'there';
 
   // First-mount paint guard: if we have no cached state at all and the query
@@ -436,19 +475,26 @@ export default function HomeScreen() {
             <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No transactions yet</Text>
           ) : (
             recentTxs.map((tx) => {
-              const isPositive = tx.amount > 0;
+              const amountMinor =
+                tx.kind === 'api' ? tx.amountMinor : Math.round(tx.amount * 100);
+              const isPositive = amountMinor > 0;
               const isCashback = tx.type === 'cashback' || tx.type === 'bonus';
-              const isTopup = tx.type === 'topup';
+              const isTopup = tx.type === 'topup' || tx.type === 'auto_reload';
               const amountColor = isCashback || isTopup ? colors.green : colors.text;
-              const TxIcon = getTxIcon(tx.type);
+              const iconType = tx.type === 'auto_reload' ? 'topup' : tx.type;
+              const TxIcon = getTxIcon(iconType);
+              const amountLabel =
+                tx.kind === 'api'
+                  ? `${isPositive ? '+' : ''}${formatMoney(tx.amountMinor, tx.currency)}`
+                  : `${isPositive ? '+' : ''}${formatCurrency(tx.amount)}`;
               return (
                 <TouchableOpacity
                   key={tx.id}
                   style={[styles.txRow, { borderBottomColor: colors.borderLight }]}
                   onPress={() => router.push(`/transactions/${tx.id}` as never)}
                 >
-                  <View style={[styles.txIcon, { backgroundColor: getTxIconBg(tx.type) }]}>
-                    <TxIcon size={18} color={getTxIconColor(tx.type)} />
+                  <View style={[styles.txIcon, { backgroundColor: getTxIconBg(iconType) }]}>
+                    <TxIcon size={18} color={getTxIconColor(iconType)} />
                   </View>
                   <View style={styles.txInfo}>
                     <Text style={[styles.txMerchant, { color: colors.text }]}>
@@ -456,10 +502,7 @@ export default function HomeScreen() {
                     </Text>
                     <Text style={[styles.txDate, { color: colors.textTertiary }]}>{formatDate(tx.date)}</Text>
                   </View>
-                  <Text style={[styles.txAmount, { color: amountColor }]}>
-                    {isPositive ? '+' : ''}
-                    {formatCurrency(tx.amount)}
-                  </Text>
+                  <Text style={[styles.txAmount, { color: amountColor }]}>{amountLabel}</Text>
                 </TouchableOpacity>
               );
             })

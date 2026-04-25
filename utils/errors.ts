@@ -172,6 +172,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   PSP_SESSION_INVALID: 'The payment session is invalid. Please try again.',
   PLAIN_PAN_FORBIDDEN: 'Card details cannot be entered directly. Use a secure provider.',
 
+  // Transactions & disputes (06-transactions)
+  TRANSACTION_NOT_FOUND: 'Transaction not found.',
+  TRANSACTION_NOT_DISPUTABLE: "This transaction can't be disputed.",
+  DISPUTE_NOT_FOUND: 'No dispute found for this transaction.',
+  DISPUTE_ALREADY_OPEN: 'A dispute is already open for this transaction.',
+  DISPUTE_REASON_INVALID: 'Please pick a valid reason.',
+  DISPUTE_DESCRIPTION_INVALID: 'Description must be between 20 and 2000 characters.',
+  DISPUTE_ATTACHMENT_LIMIT_EXCEEDED: 'Please attach up to 5 files.',
+  DISPUTE_ATTACHMENT_TOO_LARGE: 'Each file must be under 10 MB.',
+  DISPUTE_ATTACHMENT_TYPE_NOT_ALLOWED: 'Only JPEG, PNG, HEIC or PDF files are allowed.',
+  SEARCH_QUERY_TOO_SHORT: 'Type at least 2 characters to search.',
+
   // Generic
   VALIDATION_FAILED: 'Please check the fields and try again.',
   IDEMPOTENCY_KEY_IN_PROGRESS: 'A similar request is still being processed.',

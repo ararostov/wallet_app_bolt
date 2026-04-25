@@ -26,6 +26,11 @@ const config: ExpoConfig = {
     buildNumber: '1',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      // Required by expo-image-picker for the dispute attachment picker.
+      NSPhotoLibraryUsageDescription:
+        'We use the photo library so you can attach a screenshot when opening a dispute.',
+      NSCameraUsageDescription:
+        'We use the camera so you can take a photo when opening a dispute.',
     },
   },
   android: {
@@ -35,13 +40,29 @@ const config: ExpoConfig = {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
+    // Read-media permission used by expo-image-picker on Android 13+.
+    permissions: ['android.permission.READ_MEDIA_IMAGES'],
   },
   web: {
     bundler: 'metro',
     output: 'single',
     favicon: './assets/images/favicon.png',
   },
-  plugins: ['expo-router', 'expo-font', 'expo-web-browser', 'expo-secure-store'],
+  plugins: [
+    'expo-router',
+    'expo-font',
+    'expo-web-browser',
+    'expo-secure-store',
+    [
+      'expo-image-picker',
+      {
+        photosPermission:
+          'We use the photo library so you can attach a screenshot when opening a dispute.',
+        cameraPermission:
+          'We use the camera so you can take a photo when opening a dispute.',
+      },
+    ],
+  ],
   experiments: {
     typedRoutes: true,
   },
