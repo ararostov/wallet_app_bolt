@@ -1,7 +1,6 @@
 import type {
   Transaction,
   Reward,
-  Perk,
   Friend,
   Notification,
   PaymentMethod,
@@ -206,76 +205,7 @@ export const MOCK_REWARDS: Reward[] = [
   },
 ];
 
-export const MOCK_PERKS: Perk[] = [
-  {
-    id: 'perk_001',
-    title: 'Top-up Bonus',
-    description: 'Earn 2% bonus when you top up \u00a350+',
-    shortRule: '2% bonus on top-ups over \u00a350',
-    fullRules: 'Top up \u00a350 or more in a single transaction to earn a 2% bonus on the amount topped up. Maximum bonus \u00a320 per month. Applies to bank transfer and card top-ups only.',
-    status: 'active',
-    category: 'bonus',
-    cap: 20,
-    expiresAt: '2026-06-30T23:59:59Z',
-    icon: 'Wallet',
-  },
-  {
-    id: 'perk_002',
-    title: 'Refer a Friend',
-    description: 'Give \u00a35, get \u00a35 for every friend who joins',
-    shortRule: '\u00a35 for you + \u00a35 for friend',
-    fullRules: 'Share your referral code. When your friend signs up and tops up \u00a310+, you both get \u00a35. Max 10 referrals per month.',
-    status: 'active',
-    category: 'referral',
-    progress: 2,
-    target: 10,
-    cap: 50,
-    icon: 'Users',
-  },
-  {
-    id: 'perk_003',
-    title: 'Weekend Cashback',
-    description: '3% cashback on all spending Sat & Sun',
-    shortRule: '3% cashback weekends only',
-    fullRules: 'Earn 3% cashback on all card purchases made on Saturdays and Sundays (UK time). Maximum \u00a310 cashback per weekend. Cashback posted within 3 working days.',
-    status: 'active',
-    category: 'cashback',
-    icon: 'Sun',
-  },
-  {
-    id: 'perk_004',
-    title: 'Spending Milestone',
-    description: 'Spend \u00a3500 this month, earn \u00a310 bonus',
-    shortRule: 'Spend \u00a3500 \u2192 earn \u00a310',
-    fullRules: 'Spend \u00a3500+ using your card within the calendar month to earn a \u00a310 bonus reward. Progress resets monthly.',
-    status: 'active',
-    category: 'bonus',
-    progress: 325,
-    target: 500,
-    icon: 'Target',
-  },
-  {
-    id: 'perk_005',
-    title: 'Platinum Tier Unlock',
-    description: 'Reach Platinum for exclusive 5% cashback',
-    shortRule: 'Platinum members earn 5% cashback',
-    fullRules: 'Upgrade to Platinum tier by spending \u00a32,000+ in a rolling 90-day period. Platinum members earn 5% cashback on all purchases and get priority support.',
-    status: 'available',
-    category: 'tier',
-    icon: 'Star',
-  },
-  {
-    id: 'perk_006',
-    title: 'Summer Promo',
-    description: 'Double cashback on travel purchases in June',
-    shortRule: '2x cashback on travel in June',
-    fullRules: 'Earn double cashback (up to 4%) on all travel-category purchases during June 2026. Applies to flights, hotels, and transport bookings.',
-    status: 'coming_soon',
-    category: 'promo',
-    expiresAt: '2026-06-30T23:59:59Z',
-    icon: 'Plane',
-  },
-];
+// MOCK_PERKS removed \u2014 perks are now fetched from `GET /perks` (spec 07).
 
 export const MOCK_FRIENDS: Friend[] = [
   {

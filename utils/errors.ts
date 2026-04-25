@@ -172,6 +172,24 @@ const ERROR_MESSAGES: Record<string, string> = {
   PSP_SESSION_INVALID: 'The payment session is invalid. Please try again.',
   PLAIN_PAN_FORBIDDEN: 'Card details cannot be entered directly. Use a secure provider.',
 
+  // Loyalty (07-loyalty)
+  REWARD_NOT_FOUND: 'This reward is no longer available.',
+  REWARD_NOT_AVAILABLE: "This reward can't be claimed right now.",
+  REWARD_NOT_AVAILABLE_YET: 'This reward will be available soon.',
+  REWARD_ALREADY_CLAIMED: "You've already claimed this reward.",
+  REWARD_EXPIRED: 'This reward has expired.',
+  REWARD_CANCELLED: 'This reward has been cancelled.',
+  REWARD_CLAIM_LOCKED: "This reward can't be claimed right now.",
+  CLAIM_TARGET_INVALID: 'Please choose a valid destination for your reward.',
+  CARD_NOT_ELIGIBLE_FOR_CLAIM: "This card can't receive reward credits.",
+  TIER_NOT_FOUND: 'Tier information is unavailable.',
+  TIER_UPGRADE_NOT_AVAILABLE:
+    'Tier upgrade happens automatically based on your spend.',
+  TIER_MANUAL_UPGRADE_DISABLED:
+    'Tier upgrade happens automatically based on your spend.',
+  PERK_NOT_FOUND: 'This perk is no longer available.',
+  STATEMENT_RANGE_TOO_WIDE: 'Please pick a shorter date range.',
+
   // Transactions & disputes (06-transactions)
   TRANSACTION_NOT_FOUND: 'Transaction not found.',
   TRANSACTION_NOT_DISPUTABLE: "This transaction can't be disputed.",

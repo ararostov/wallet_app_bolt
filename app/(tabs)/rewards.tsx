@@ -1,264 +1,359 @@
-import React, { useState } from 'react';
+// Rewards tab — spec 07-loyalty §4.1.
+//
+// Replaces the previous mock-driven implementation with the loyalty API
+// surface: cursor-paginated `useRewards`, hero summary derived from the
+// feed, bucket filter chips (cashback / bonus / promo — referral source
+// rewards are folded into the bonus chip per the OpenAPI bucket enum),
+// reward detail bottom sheet with claim CTA.
+
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
   ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
-  Modal,
+  View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { X, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react-native';
-import { useWallet } from '@/context/WalletContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { ArrowLeft, ChevronDown, ChevronUp, Gift } from 'lucide-react-native';
+
+import { Button } from '@/components/ui/Button';
+import { RewardDetailSheet } from '@/components/features/loyalty/RewardDetailSheet';
+import { RewardRow } from '@/components/features/loyalty/RewardRow';
 import { useTheme } from '@/context/ThemeContext';
-import { formatCurrency, formatDateShort } from '@/utils/format';
-import type { Reward } from '@/types';
+import { useRewards } from '@/hooks/useRewards';
+import { useWallet } from '@/context/WalletContext';
+import type { RewardBucket } from '@/types/loyalty';
+import { formatMoney } from '@/utils/format';
 
-const BUCKETS = ['all', 'cashback', 'bonus', 'promo'] as const;
-type Bucket = typeof BUCKETS[number];
+type BucketFilter = 'all' | RewardBucket;
 
-const BUCKET_LABELS: Record<Bucket, string> = {
-  all: 'All',
-  cashback: 'Cashback',
-  bonus: 'Bonuses',
-  promo: 'Promo',
-};
+const BUCKET_FILTERS: { id: BucketFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'cashback', label: 'Cashback' },
+  { id: 'bonus', label: 'Bonus' },
+  { id: 'promo', label: 'Promo' },
+];
 
-function RewardRow({ reward, onPress, colors, isDark }: { reward: Reward; onPress: () => void; colors: any; isDark: boolean }) {
-  const statusColors: Record<string, { bg: string; text: string }> = {
-    available: { bg: isDark ? '#064E3B' : '#dcfce7', text: isDark ? '#34D399' : '#15803d' },
-    pending: { bg: isDark ? '#78350F' : '#fef3c7', text: isDark ? '#FBBF24' : '#92400e' },
-    expired: { bg: isDark ? '#334155' : '#f1f5f9', text: colors.textSecondary },
-    claimed: { bg: isDark ? '#1E3A5F' : '#dbeafe', text: isDark ? '#3B82F6' : '#1d4ed8' },
-  };
-  const sc = statusColors[reward.status] ?? statusColors.available;
-  const isPositive = reward.status !== 'expired';
-  return (
-    <TouchableOpacity style={[styles.rewardRow, { borderBottomColor: colors.borderLight }]} onPress={onPress}>
-      <View style={[styles.rewardDot, { backgroundColor: reward.bucket === 'cashback' ? '#059669' : reward.bucket === 'bonus' ? '#d97706' : colors.primary }]} />
-      <View style={styles.rewardInfo}>
-        <Text style={[styles.rewardSource, { color: colors.text }]}>{reward.source}</Text>
-        <Text style={[styles.rewardMeta, { color: colors.textTertiary }]}>
-          Earned {formatDateShort(reward.earnedAt)} · Expires {formatDateShort(reward.expiresAt)}
-        </Text>
-      </View>
-      <View style={styles.rewardRight}>
-        <Text style={[styles.rewardAmount, !isPositive && { color: colors.textTertiary }]}>
-          +{formatCurrency(reward.amount)}
-        </Text>
-        <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
-          <Text style={[styles.statusTextLabel, { color: sc.text }]}>{reward.status}</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-export default function RewardsScreen() {
+export default function RewardsScreen(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { state, availableRewardsTotal } = useWallet();
   const { colors, isDark } = useTheme();
-  const [activeBucket, setActiveBucket] = useState<Bucket>('all');
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
+  const { state } = useWallet();
+  const params = useLocalSearchParams<{ rewardId?: string }>();
+
+  const [activeBucket, setActiveBucket] = useState<BucketFilter>('all');
+  const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
-  const filtered = activeBucket === 'all'
-    ? state.rewards
-    : state.rewards.filter((r) => r.bucket === activeBucket);
+  const rewardsQuery = useRewards();
+
+  // Auto-open detail sheet on deep-link param.
+  useEffect(() => {
+    if (typeof params.rewardId === 'string' && params.rewardId.length > 0) {
+      setSelectedRewardId(params.rewardId);
+    }
+  }, [params.rewardId]);
+
+  const items = rewardsQuery.data;
+  const summary = state.rewardsSummary;
+
+  const filtered = useMemo(() => {
+    if (activeBucket === 'all') return items;
+    return items.filter((r) => r.bucket === activeBucket);
+  }, [items, activeBucket]);
+
+  const currency = summary?.currency ?? 'GBP';
+  const heroEarned = summary
+    ? formatMoney(summary.earnedAllTimeMinor, summary.currency)
+    : formatMoney(0, currency);
+  const heroPending = summary
+    ? formatMoney(summary.pendingMinor, summary.currency)
+    : formatMoney(0, currency);
 
   return (
-    <SafeAreaView edges={['left', 'right']} style={[styles.safe, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + 14 }]}>
+    <SafeAreaView
+      edges={['left', 'right']}
+      style={[styles.safe, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.border,
+            paddingTop: insets.top + 14,
+          },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <ArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Rewards</Text>
-        <TouchableOpacity onPress={() => router.push('/tier')}>
-          <Text style={[styles.tierLink, { color: colors.primary }]}>Tier</Text>
-        </TouchableOpacity>
+        <View style={styles.headerLinks}>
+          <TouchableOpacity onPress={() => router.push('/tier')}>
+            <Text style={[styles.headerLink, { color: colors.primary }]}>Tier</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/rewards/statement')}>
+            <Text style={[styles.headerLink, { color: colors.primary }]}>
+              Statement
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}>
 
-        <View style={[styles.hero, { backgroundColor: colors.surface }]}>
-          <View style={styles.heroStatRow}>
-            <View style={styles.heroStat}>
-              <Text style={[styles.heroStatAmount, { color: colors.text }]}>{formatCurrency(availableRewardsTotal + 14.07)}</Text>
-              <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>Earned all time</Text>
-            </View>
-            <View style={[styles.heroStatDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.heroStat}>
-              <Text style={[styles.heroStatAmount, { color: colors.amber }]}>
-                {formatCurrency(state.rewards.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0))}
-              </Text>
-              <Text style={[styles.heroStatLabel, { color: colors.textSecondary }]}>Pending</Text>
-            </View>
-          </View>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabs} contentContainerStyle={styles.tabsContent}>
-          {BUCKETS.map((b) => (
-            <TouchableOpacity
-              key={b}
-              style={[styles.tab, { backgroundColor: colors.surfaceAlt }, activeBucket === b && { backgroundColor: colors.primary }]}
-              onPress={() => setActiveBucket(b)}
-            >
-              <Text style={[styles.tabText, { color: colors.textSecondary }, activeBucket === b && styles.tabTextActive]}>
-                {BUCKET_LABELS[b]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        <View style={styles.list}>
-          {filtered.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>No rewards in this category</Text>
-          ) : (
-            filtered.map((r) => (
-              <RewardRow key={r.id} reward={r} onPress={() => setSelectedReward(r)} colors={colors} isDark={isDark} />
-            ))
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.expandSection, { borderTopColor: colors.border }]}
-          onPress={() => setHowItWorksOpen((v) => !v)}
-        >
-          <Text style={[styles.expandTitle, { color: colors.text }]}>How rewards work</Text>
-          {howItWorksOpen ? <ChevronUp size={18} color={colors.textSecondary} /> : <ChevronDown size={18} color={colors.textSecondary} />}
-        </TouchableOpacity>
-        {howItWorksOpen && (
-          <View style={styles.expandContent}>
-            {[
-              ['Cashback', 'Earned on every purchase. Posted within 3 working days.'],
-              ['Bonuses', 'One-off rewards from referrals, milestones, and promotions.'],
-              ['Promo', 'Limited-time rewards from special campaigns.'],
-              ['Expiry', 'All rewards expire 90 days after being earned.'],
-            ].map(([t, desc]) => (
-              <View key={t} style={styles.expandItem}>
-                <Text style={[styles.expandItemTitle, { color: colors.text }]}>{t}</Text>
-                <Text style={[styles.expandItemDesc, { color: colors.textSecondary }]}>{desc}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-
-      <Modal visible={!!selectedReward} animationType="slide" presentationStyle="pageSheet">
-        {selectedReward && (
-          <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.surface }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Reward details</Text>
-              <TouchableOpacity onPress={() => setSelectedReward(null)}>
-                <X size={22} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.modalContent}>
-              <View style={styles.modalAmountRow}>
-                <Text style={styles.modalAmount}>+{formatCurrency(selectedReward.amount)}</Text>
-              </View>
-              {[
-                ['Source', selectedReward.source],
-                ['Type', selectedReward.bucket],
-                ['Earned', formatDateShort(selectedReward.earnedAt)],
-                ['Expires', formatDateShort(selectedReward.expiresAt)],
-              ].map(([label, value]) => (
-                <View key={label} style={[styles.infoRow, { borderBottomColor: colors.borderLight }]}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{label}</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>{value}</Text>
+      <FlatList
+        data={filtered}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={rewardsQuery.refreshing}
+            onRefresh={rewardsQuery.refresh}
+            tintColor={colors.primary}
+          />
+        }
+        onEndReachedThreshold={0.4}
+        onEndReached={() => {
+          if (rewardsQuery.hasMore && !rewardsQuery.loadingMore) {
+            void rewardsQuery.loadMore();
+          }
+        }}
+        ListHeaderComponent={
+          <>
+            <View style={[styles.hero, { backgroundColor: colors.surface }]}>
+              <View style={styles.heroRow}>
+                <View style={styles.heroStat}>
+                  <Text style={[styles.heroAmount, { color: colors.text }]}>
+                    {heroEarned}
+                  </Text>
+                  <Text
+                    style={[styles.heroLabel, { color: colors.textSecondary }]}
+                  >
+                    Earned all time
+                  </Text>
                 </View>
-              ))}
-              {selectedReward.linkedTxId && (
-                <TouchableOpacity
-                  style={styles.linkedTx}
-                  onPress={() => { setSelectedReward(null); router.push(`/transactions/${selectedReward.linkedTxId}` as any); }}
-                >
-                  <Text style={[styles.linkedTxText, { color: colors.primary }]}>View linked transaction</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={[styles.modalNote, { color: colors.textTertiary, backgroundColor: colors.background }]}>
-                Rewards are credited to your Tesco Wallet balance. Terms apply.
-              </Text>
+                <View
+                  style={[styles.heroDivider, { backgroundColor: colors.border }]}
+                />
+                <View style={styles.heroStat}>
+                  <Text style={[styles.heroAmount, { color: colors.amber }]}>
+                    {heroPending}
+                  </Text>
+                  <Text
+                    style={[styles.heroLabel, { color: colors.textSecondary }]}
+                  >
+                    Pending
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsRow}
+            >
+              {BUCKET_FILTERS.map((b) => {
+                const active = activeBucket === b.id;
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    onPress={() => setActiveBucket(b.id)}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: active
+                          ? colors.primary
+                          : colors.surfaceAlt,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter rewards by ${b.label}`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: active ? '#fff' : colors.textSecondary },
+                      ]}
+                    >
+                      {b.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
-          </SafeAreaView>
+          </>
+        }
+        ListEmptyComponent={
+          rewardsQuery.loading ? (
+            <ActivityIndicator
+              color={colors.primary}
+              style={{ marginTop: 40 }}
+            />
+          ) : (
+            <View style={styles.empty}>
+              <View
+                style={[
+                  styles.emptyIcon,
+                  { backgroundColor: isDark ? colors.surfaceAlt : '#f1f5f9' },
+                ]}
+              >
+                <Gift size={32} color={colors.textTertiary} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No rewards yet
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
+              >
+                Top up your wallet to start earning cashback.
+              </Text>
+              <Button
+                variant="primary"
+                size="md"
+                onPress={() => router.push('/topup')}
+                style={{ marginTop: 16 }}
+              >
+                Top up now
+              </Button>
+            </View>
+          )
+        }
+        renderItem={({ item }) => (
+          <View style={styles.itemWrapper}>
+            <RewardRow
+              reward={item}
+              onPress={() => setSelectedRewardId(item.id)}
+            />
+          </View>
         )}
-      </Modal>
+        ListFooterComponent={
+          <>
+            {rewardsQuery.loadingMore ? (
+              <ActivityIndicator
+                color={colors.primary}
+                style={{ paddingVertical: 16 }}
+              />
+            ) : null}
+            <TouchableOpacity
+              style={[styles.expandRow, { borderTopColor: colors.border }]}
+              onPress={() => setHowItWorksOpen((v) => !v)}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.expandTitle, { color: colors.text }]}>
+                How rewards work
+              </Text>
+              {howItWorksOpen ? (
+                <ChevronUp size={18} color={colors.textSecondary} />
+              ) : (
+                <ChevronDown size={18} color={colors.textSecondary} />
+              )}
+            </TouchableOpacity>
+            {howItWorksOpen ? (
+              <View style={styles.howContent}>
+                {[
+                  ['Cashback', 'Earned on every purchase. Posted within 3 working days.'],
+                  ['Bonuses', 'One-off rewards from referrals, milestones, and promotions.'],
+                  ['Promo', 'Limited-time rewards from special campaigns.'],
+                  ['Expiry', 'Rewards expire 90 days after they become available.'],
+                ].map(([t, desc]) => (
+                  <View key={t} style={{ marginBottom: 8 }}>
+                    <Text style={[styles.howTitle, { color: colors.text }]}>{t}</Text>
+                    <Text style={[styles.howDesc, { color: colors.textSecondary }]}>
+                      {desc}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </>
+        }
+      />
+
+      <RewardDetailSheet
+        rewardId={selectedRewardId}
+        onClose={() => setSelectedRewardId(null)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scroll: { paddingBottom: 80 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
   backBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 24, fontFamily: 'Inter-Bold' },
-  tierLink: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  title: { fontSize: 22, fontFamily: 'Inter-Bold' },
+  headerLinks: { flexDirection: 'row', gap: 14 },
+  headerLink: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  listContent: { paddingBottom: 80 },
   hero: {
     marginHorizontal: 16,
+    marginTop: 16,
     borderRadius: 20,
     padding: 24,
-    marginBottom: 16,
     alignItems: 'center',
-    gap: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 3,
   },
-  heroStatRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+  heroRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
   heroStat: { flex: 1, alignItems: 'center', gap: 4 },
-  heroStatDivider: { width: 1, height: 44 },
-  heroStatAmount: { fontSize: 32, fontFamily: 'Inter-Bold', letterSpacing: -1 },
-  heroStatLabel: { fontSize: 15, fontFamily: 'Inter-Regular' },
-  tabs: { marginBottom: 4 },
-  tabsContent: { paddingHorizontal: 16, gap: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  tabText: { fontSize: 15, fontFamily: 'Inter-Medium' },
-  tabTextActive: { color: '#fff' },
-  list: { paddingHorizontal: 16, marginTop: 8 },
-  rewardRow: {
-    flexDirection: 'row',
+  heroDivider: { width: 1, height: 44 },
+  heroAmount: { fontSize: 30, fontFamily: 'Inter-Bold', letterSpacing: -1 },
+  heroLabel: { fontSize: 14, fontFamily: 'Inter-Regular' },
+  chipsRow: { paddingHorizontal: 16, gap: 8, paddingVertical: 12 },
+  chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  chipText: { fontSize: 14, fontFamily: 'Inter-Medium' },
+  itemWrapper: { paddingHorizontal: 16 },
+  empty: { alignItems: 'center', paddingTop: 48, paddingHorizontal: 24 },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    gap: 12,
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  rewardDot: { width: 10, height: 10, borderRadius: 5, marginTop: 2 },
-  rewardInfo: { flex: 1 },
-  rewardSource: { fontSize: 16, fontFamily: 'Inter-SemiBold', lineHeight: 20 },
-  rewardMeta: { fontSize: 15, fontFamily: 'Inter-Regular', marginTop: 2 },
-  rewardRight: { alignItems: 'flex-end', gap: 4 },
-  rewardAmount: { fontSize: 17, fontFamily: 'Inter-SemiBold', color: '#059669' },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
-  statusTextLabel: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  emptyText: { textAlign: 'center', fontFamily: 'Inter-Regular', paddingVertical: 24 },
-  expandSection: {
+  emptyTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold' },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    marginTop: 6,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  expandRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     borderTopWidth: 1,
+    marginTop: 16,
   },
-  expandTitle: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
-  expandContent: { paddingHorizontal: 16, gap: 12, paddingBottom: 8 },
-  expandItem: { gap: 2 },
-  expandItemTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
-  expandItemDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
-  modalSafe: { flex: 1 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 19, fontFamily: 'Inter-Bold' },
-  modalContent: { padding: 20, gap: 16 },
-  modalAmountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  modalAmount: { fontSize: 35, fontFamily: 'Inter-Bold', color: '#059669' },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1 },
-  infoLabel: { fontSize: 16, fontFamily: 'Inter-Regular' },
-  infoValue: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
-  linkedTx: { paddingVertical: 12 },
-  linkedTxText: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
-  modalNote: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18, padding: 12, borderRadius: 8 },
+  expandTitle: { fontSize: 16, fontFamily: 'Inter-SemiBold' },
+  howContent: { paddingHorizontal: 16, paddingBottom: 16, gap: 8 },
+  howTitle: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
+  howDesc: { fontSize: 14, fontFamily: 'Inter-Regular', lineHeight: 18 },
 });

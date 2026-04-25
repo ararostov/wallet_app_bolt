@@ -41,6 +41,12 @@ import type {
   DisputeRecord,
   TransactionRecord,
 } from '../types/transactions';
+import type {
+  Perk as ApiPerk,
+  Reward as ApiReward,
+  RewardsSummary,
+  Tier as ApiTier,
+} from '../types/loyalty';
 
 // Re-export the canonical transaction record under its legacy alias so
 // existing call sites that imported ApiTransactionRecord from this module
@@ -50,7 +56,6 @@ export type { TransactionRecord as ApiTransactionRecord } from '../types/transac
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
-  MOCK_PERKS,
   MOCK_FRIENDS,
   MOCK_NOTIFICATIONS,
   MOCK_PAYMENT_METHODS,
@@ -139,6 +144,18 @@ interface WalletState {
   // Disputes keyed by transactionId. Hydrated from POST /report (full record)
   // and from GET /transactions/:id (summary promoted to a partial record).
   disputesApi: Record<string, DisputeRecord>;
+  // --- Loyalty slices (spec 07-loyalty) backend-shape --------------------
+  // `rewardsApi` is the materialised paged feed (page 1 + appended pages).
+  // `rewardsSummary` carries the two hero figures derived from the feed
+  // (earned all time excluding expired/cancelled, pending cashback).
+  // `tierApiFull` is the full Tier payload from `GET /tier` — distinct
+  // from the slimmer `tierApi: TierSummary` slice used by spec-02 home
+  // tile, which we keep for the home tile's compact view.
+  // `perksApi` is the catalog from `GET /perks`.
+  rewardsApi: ApiReward[] | null;
+  rewardsSummary: RewardsSummary | null;
+  tierApiFull: ApiTier | null;
+  perksApi: ApiPerk[] | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -199,6 +216,15 @@ type WalletAction =
   | { type: 'DISPUTES/UPSERT'; payload: DisputeRecord }
   | { type: 'DISPUTES/SET_FOR_TRANSACTION'; payload: DisputeRecord }
   | { type: 'DISPUTES/CLEAR' }
+  // --- Loyalty slices (spec 07-loyalty) ---------------------------------
+  | { type: 'REWARDS/SET_API'; payload: ApiReward[] }
+  | { type: 'REWARDS/APPEND_API'; payload: ApiReward[] }
+  | { type: 'REWARDS/UPSERT_API'; payload: ApiReward }
+  | { type: 'REWARDS/REMOVE_API'; payload: { id: string } }
+  | { type: 'REWARDS/SET_SUMMARY'; payload: RewardsSummary }
+  | { type: 'REWARDS/CLEAR_API' }
+  | { type: 'TIER/SET_API'; payload: ApiTier }
+  | { type: 'PERKS/SET_API'; payload: ApiPerk[] }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -291,7 +317,9 @@ const defaultState: WalletState = {
   card: initialCard,
   transactions: MOCK_TRANSACTIONS,
   rewards: MOCK_REWARDS,
-  perks: MOCK_PERKS,
+  // Legacy `perks` slice — no longer consumed by any screen after spec 07
+  // wired the new perks API; the empty array keeps the type contract.
+  perks: [],
   tier: initialTier,
   autoReload: initialAutoReload,
   referral: initialReferral,
@@ -305,6 +333,10 @@ const defaultState: WalletState = {
   paymentMethodsApi: null,
   transactionsApi: null,
   disputesApi: {},
+  rewardsApi: null,
+  rewardsSummary: null,
+  tierApiFull: null,
+  perksApi: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -707,6 +739,49 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     case 'DISPUTES/CLEAR':
       return { ...state, disputesApi: {} };
+
+    // --- Loyalty slices (spec 07) -----------------------------------------
+
+    case 'REWARDS/SET_API':
+      return { ...state, rewardsApi: action.payload };
+
+    case 'REWARDS/APPEND_API': {
+      const current = state.rewardsApi ?? [];
+      const known = new Set(current.map((r) => r.id));
+      const fresh = action.payload.filter((r) => !known.has(r.id));
+      return { ...state, rewardsApi: [...current, ...fresh] };
+    }
+
+    case 'REWARDS/UPSERT_API': {
+      const incoming = action.payload;
+      const current = state.rewardsApi ?? [];
+      const idx = current.findIndex((r) => r.id === incoming.id);
+      const next =
+        idx >= 0
+          ? current.map((r, i) => (i === idx ? incoming : r))
+          : [incoming, ...current];
+      return { ...state, rewardsApi: next };
+    }
+
+    case 'REWARDS/REMOVE_API': {
+      if (!state.rewardsApi) return state;
+      return {
+        ...state,
+        rewardsApi: state.rewardsApi.filter((r) => r.id !== action.payload.id),
+      };
+    }
+
+    case 'REWARDS/SET_SUMMARY':
+      return { ...state, rewardsSummary: action.payload };
+
+    case 'REWARDS/CLEAR_API':
+      return { ...state, rewardsApi: null, rewardsSummary: null };
+
+    case 'TIER/SET_API':
+      return { ...state, tierApiFull: action.payload };
+
+    case 'PERKS/SET_API':
+      return { ...state, perksApi: action.payload };
 
     default:
       return state;
