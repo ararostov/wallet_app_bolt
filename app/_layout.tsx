@@ -1,3 +1,8 @@
+// Polyfill global.crypto.getRandomValues for Hermes — required by `uuid` v14
+// (used in utils/idempotency.ts and X-Request-Id generation in utils/api.ts).
+// Must load before any module that imports uuid.
+import 'react-native-get-random-values';
+
 import { useEffect, useRef } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

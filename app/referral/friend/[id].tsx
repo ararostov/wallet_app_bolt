@@ -153,9 +153,11 @@ export default function FriendDetailScreen() {
         <FriendDetail
           friend={friend}
           onPressReward={(rewardId) =>
+            // Reward detail lives in the BottomSheet on /(tabs)/rewards;
+            // the screen consumes ?rewardId=... to auto-open the sheet.
             router.push({
-              pathname: '/rewards/[id]',
-              params: { id: rewardId },
+              pathname: '/(tabs)/rewards',
+              params: { rewardId },
             })
           }
         />
