@@ -8,7 +8,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,6 +28,7 @@ import {
 
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { usePaymentMethods } from '@/hooks/usePaymentMethods';
 import type { PaymentMethod as ApiPaymentMethod } from '@/types/paymentMethods';
 import { formatMoney, parseAmountInput } from '@/utils/format';
@@ -399,96 +399,92 @@ export default function TopupScreen() {
         )}
       </View>
 
-      <Modal
+      <BottomSheet
         visible={methodModalOpen}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setMethodModalOpen(false)}
+        onClose={() => setMethodModalOpen(false)}
+        snapPoints={['50%', '80%']}
+        accessibilityLabel="Payment method picker"
       >
-        <SafeAreaView
-          style={[styles.modalSafe, { backgroundColor: colors.surface }]}
+        <View
+          style={[styles.modalHeader, { borderBottomColor: colors.border }]}
         >
-          <View
-            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+          <Text style={[styles.modalTitle, { color: colors.text }]}>
+            Payment method
+          </Text>
+          <TouchableOpacity
+            onPress={() => setMethodModalOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Close payment method picker"
           >
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Payment method
-            </Text>
-            <TouchableOpacity
-              onPress={() => setMethodModalOpen(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Close payment method picker"
-            >
-              <X size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView contentContainerStyle={styles.modalScroll}>
-            {activeMethods.map((method) => {
-              const Icon = paymentMethodIcon(method);
-              const selected = method.id === selectedMethodId;
-              return (
-                <TouchableOpacity
-                  key={method.id}
-                  style={[
-                    styles.methodOption,
-                    { borderColor: colors.border },
-                    selected && {
-                      borderColor: colors.primary,
-                      backgroundColor: isDark ? colors.surfaceAlt : '#eff6ff',
-                    },
-                  ]}
-                  onPress={() => {
-                    setSelectedMethodId(method.id);
-                    setMethodModalOpen(false);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                >
-                  <Icon size={20} color={colors.primary} />
-                  <Text
-                    style={[
-                      styles.methodOptionLabel,
-                      { color: colors.text },
-                    ]}
-                  >
-                    {paymentMethodLabel(method)}
-                  </Text>
-                  {selected && (
-                    <View
-                      style={[
-                        styles.selectedDot,
-                        { backgroundColor: colors.primary },
-                      ]}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              style={[
-                styles.methodOption,
-                { borderColor: colors.border, borderStyle: 'dashed' },
-              ]}
-              onPress={() => {
-                setMethodModalOpen(false);
-                router.push('/payment-methods/add');
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Add new payment method"
-            >
-              <Plus size={20} color={colors.textSecondary} />
-              <Text
+            <X size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={styles.modalScroll}>
+          {activeMethods.map((method) => {
+            const Icon = paymentMethodIcon(method);
+            const selected = method.id === selectedMethodId;
+            return (
+              <TouchableOpacity
+                key={method.id}
                 style={[
-                  styles.methodOptionLabel,
-                  { color: colors.textSecondary },
+                  styles.methodOption,
+                  { borderColor: colors.border },
+                  selected && {
+                    borderColor: colors.primary,
+                    backgroundColor: isDark ? colors.surfaceAlt : '#eff6ff',
+                  },
                 ]}
+                onPress={() => {
+                  setSelectedMethodId(method.id);
+                  setMethodModalOpen(false);
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
               >
-                Add new payment method
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+                <Icon size={20} color={colors.primary} />
+                <Text
+                  style={[
+                    styles.methodOptionLabel,
+                    { color: colors.text },
+                  ]}
+                >
+                  {paymentMethodLabel(method)}
+                </Text>
+                {selected && (
+                  <View
+                    style={[
+                      styles.selectedDot,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            style={[
+              styles.methodOption,
+              { borderColor: colors.border, borderStyle: 'dashed' },
+            ]}
+            onPress={() => {
+              setMethodModalOpen(false);
+              router.push('/payment-methods/add');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Add new payment method"
+          >
+            <Plus size={20} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.methodOptionLabel,
+                { color: colors.textSecondary },
+              ]}
+            >
+              Add new payment method
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -607,7 +603,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#fff',
   },
-  modalSafe: { flex: 1 },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

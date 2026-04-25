@@ -1,28 +1,24 @@
 // RewardDetailSheet — modal sheet showing reward detail and claim CTA.
-// Uses RN Modal in pageSheet mode (consistent with existing screens) — the
-// project does not currently have a BottomSheet UI primitive in
-// `components/ui`, and the Modal-based pattern is already in use for
-// reward / transaction details. The sheet fetches the latest detail via
-// `useReward(id)` so claimability flags are fresh, and runs the claim
-// through `useClaimReward`. Idempotency-Key is owned by the hook and
-// rotates after a successful claim.
+// Built on the shared <BottomSheet> UI primitive (`components/ui/BottomSheet`)
+// so the same gesture / backdrop / snap-point UX applies on both iOS and
+// Android. The sheet fetches the latest detail via `useReward(id)` so
+// claimability flags are fresh, and runs the claim through `useClaimReward`.
+// Idempotency-Key is owned by the hook and rotates after a successful claim.
 
 import React, { useEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ExternalLink, X } from 'lucide-react-native';
 
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { Button } from '@/components/ui/Button';
 import { toast } from '@/components/ui/Toast';
 import { useTheme } from '@/context/ThemeContext';
@@ -156,22 +152,22 @@ export function RewardDetailSheet({
   };
 
   return (
-    <Modal
+    <BottomSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onClose={onClose}
+      snapPoints={['60%', '90%']}
+      scrollable
+      accessibilityLabel="Reward details"
     >
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.title, { color: colors.text }]}>Reward details</Text>
-          <TouchableOpacity onPress={onClose} accessibilityLabel="Close">
-            <X size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Reward details</Text>
+        <TouchableOpacity onPress={onClose} accessibilityLabel="Close">
+          <X size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
-          {loading && !reward ? (
+      <View style={styles.content}>
+        {loading && !reward ? (
             <ActivityIndicator color={colors.primary} style={styles.loading} />
           ) : !reward ? (
             <Text style={[styles.empty, { color: colors.textSecondary }]}>
@@ -273,9 +269,8 @@ export function RewardDetailSheet({
               </Text>
             </>
           )}
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
+      </View>
+    </BottomSheet>
   );
 }
 
@@ -296,7 +291,6 @@ function InfoRow({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

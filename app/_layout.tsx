@@ -6,6 +6,7 @@ import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { WalletProvider, useWallet } from '@/context/WalletContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { ToastProvider } from '@/components/ui/Toast';
+import { BottomSheetProvider } from '@/components/ui/BottomSheet';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { handleActionRoute, handleDeepLink } from '@/utils/deepLinks';
 import {
@@ -179,9 +180,11 @@ export default function RootLayout() {
       <GestureHandlerRootView style={styles.root}>
         <ThemeProvider>
           <WalletProvider>
-            <ToastProvider>
-              <AppContent />
-            </ToastProvider>
+            <BottomSheetProvider>
+              <ToastProvider>
+                <AppContent />
+              </ToastProvider>
+            </BottomSheetProvider>
           </WalletProvider>
         </ThemeProvider>
       </GestureHandlerRootView>

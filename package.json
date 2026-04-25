@@ -12,6 +12,7 @@
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
+    "@gorhom/bottom-sheet": "^5.2.10",
     "@lucide/lab": "^0.1.2",
     "@react-native-async-storage/async-storage": "^3.0.2",
     "@react-native-community/datetimepicker": "^9.1.0",

@@ -11,7 +11,6 @@ import {
   FlatList,
   Linking,
   ListRenderItem,
-  Modal,
   RefreshControl,
   StyleSheet,
   Text,
@@ -24,6 +23,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronRight, MapPin, Search, X } from 'lucide-react-native';
 
 import { useTheme } from '@/context/ThemeContext';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useStores } from '@/hooks/useStores';
 import type { Store } from '@/types/stores';
 import { ApiError, mapErrorCode } from '@/utils/errors';
@@ -175,8 +175,10 @@ interface StoreDetailModalProps {
 }
 
 function StoreDetailModal({ store, onClose, colors }: StoreDetailModalProps) {
-  if (!store) return null;
-  const address = buildAddress(store);
+  // store === null collapses the bottom sheet. We keep the wrapper mounted so
+  // the slide-down animation plays even on the last render before unmount.
+  const visible = store !== null;
+  const address = store ? buildAddress(store) : '';
 
   const openAppleMaps = () => {
     const url = `http://maps.apple.com/?address=${encodeURIComponent(address)}`;
@@ -189,63 +191,65 @@ function StoreDetailModal({ store, onClose, colors }: StoreDetailModalProps) {
   };
 
   return (
-    <Modal
-      visible
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <BottomSheet
+      visible={visible}
+      onClose={onClose}
+      enableDynamicSizing
+      accessibilityLabel="Store details"
     >
-      <SafeAreaView style={[styles.modalSafe, { backgroundColor: colors.surface }]}>
-        <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>
-            {store.name}
-          </Text>
-          <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityLabel="Close">
-            <X size={22} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.modalContent}>
-          <View style={styles.modalRow}>
-            <MapPin size={18} color={colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.modalRowLabel, { color: colors.textTertiary }]}>Address</Text>
-              <Text style={[styles.modalRowValue, { color: colors.text }]}>{address}</Text>
-            </View>
+      {store ? (
+        <View style={{ backgroundColor: colors.surface }}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]} numberOfLines={1}>
+              {store.name}
+            </Text>
+            <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityLabel="Close">
+              <X size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
 
-          {store.timezone && (
+          <View style={styles.modalContent}>
             <View style={styles.modalRow}>
-              <View style={{ width: 18 }} />
+              <MapPin size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modalRowLabel, { color: colors.textTertiary }]}>Timezone</Text>
-                <Text style={[styles.modalRowValue, { color: colors.text }]}>{store.timezone}</Text>
+                <Text style={[styles.modalRowLabel, { color: colors.textTertiary }]}>Address</Text>
+                <Text style={[styles.modalRowValue, { color: colors.text }]}>{address}</Text>
               </View>
             </View>
-          )}
 
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: colors.primary }]}
-            onPress={openAppleMaps}
-            accessibilityRole="button"
-          >
-            <MapPin size={18} color="#fff" />
-            <Text style={styles.actionBtnText}>Open in Apple Maps</Text>
-          </TouchableOpacity>
+            {store.timezone && (
+              <View style={styles.modalRow}>
+                <View style={{ width: 18 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalRowLabel, { color: colors.textTertiary }]}>Timezone</Text>
+                  <Text style={[styles.modalRowValue, { color: colors.text }]}>{store.timezone}</Text>
+                </View>
+              </View>
+            )}
 
-          <TouchableOpacity
-            style={[styles.actionBtnSecondary, { borderColor: colors.primary }]}
-            onPress={openGoogleMaps}
-            accessibilityRole="button"
-          >
-            <MapPin size={18} color={colors.primary} />
-            <Text style={[styles.actionBtnTextSecondary, { color: colors.primary }]}>
-              Open in Google Maps
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+              onPress={openAppleMaps}
+              accessibilityRole="button"
+            >
+              <MapPin size={18} color="#fff" />
+              <Text style={styles.actionBtnText}>Open in Apple Maps</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtnSecondary, { borderColor: colors.primary }]}
+              onPress={openGoogleMaps}
+              accessibilityRole="button"
+            >
+              <MapPin size={18} color={colors.primary} />
+              <Text style={[styles.actionBtnTextSecondary, { color: colors.primary }]}>
+                Open in Google Maps
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </SafeAreaView>
-    </Modal>
+      ) : null}
+    </BottomSheet>
   );
 }
 
@@ -298,7 +302,6 @@ const styles = StyleSheet.create({
   storeName: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
   storeAddress: { fontSize: 14, fontFamily: 'Inter-Regular', marginTop: 2 },
   storeMeta: { fontSize: 12, fontFamily: 'Inter-Regular', marginTop: 2 },
-  modalSafe: { flex: 1 },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     padding: 16, borderBottomWidth: 1, gap: 12,
