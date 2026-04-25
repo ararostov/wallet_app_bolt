@@ -7,7 +7,7 @@
 // the full RegisterRequest from the draft and fire the mutation; on success
 // we replace to the OTP screen.
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -66,6 +66,27 @@ export default function ProfileScreen() {
   const secondaryRef = useRef<TextInputType>(null);
 
   const register = useRegister();
+
+  // Safety net: if the user landed here without going through screen 1
+  // (persisted draft from before consents-inline refactor, or fresh resume
+  // path), bounce them back so they can review and tick the legal docs.
+  // The visible-consent invariant from spec 00-auth must hold.
+  useEffect(() => {
+    if (draft.acceptedConsentIds.length === 0) {
+      router.replace('/(onboarding)/signup');
+    }
+  }, [draft.acceptedConsentIds.length, router]);
+
+  // Defensive Back: when this screen was reached via resume routing
+  // (selectSignupResumeRoute → router.replace), the back stack is empty.
+  // Fall back to /signup so the user always has a route out.
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(onboarding)/signup');
+    }
+  };
 
   const maxDob = useMemo(() => {
     const d = new Date();
@@ -208,7 +229,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.surface }]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Text style={[styles.backText, { color: colors.primary }]}>{'← Back'}</Text>
           </TouchableOpacity>
           <ProgressStepper current={1} total={2} />
