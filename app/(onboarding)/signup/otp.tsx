@@ -19,14 +19,13 @@ import { useTheme } from '@/context/ThemeContext';
 import { useWallet } from '@/context/WalletContext';
 import { ProgressStepper } from '@/components/ui/ProgressStepper';
 import { OtpInput } from '@/components/ui/OtpInput';
-import { useRegister } from '@/hooks/useRegister';
 import { useVerifyRegistration } from '@/hooks/useVerifyRegistration';
 import { useOtpCountdown } from '@/hooks/useOtpCountdown';
+import { authApi } from '@/utils/api/auth';
 import { ApiError, mapErrorCode } from '@/utils/errors';
 import { getDeviceInfo } from '@/utils/device';
 import { logEvent } from '@/utils/logger';
 import { maskIdentifier } from '@/utils/format';
-import type { RegisterRequest } from '@/types/auth';
 
 export default function SignupOtpScreen() {
   const router = useRouter();
@@ -38,7 +37,7 @@ export default function SignupOtpScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const verify = useVerifyRegistration();
-  const register = useRegister();
+  const [resending, setResending] = useState(false);
 
   const { remainingSeconds, isExpired } = useOtpCountdown(draft.resendDeadlineMs);
 
@@ -81,43 +80,31 @@ export default function SignupOtpScreen() {
   };
 
   const handleResend = async () => {
-    if (!isExpired || register.loading) return;
-    if (!draft.firstName || !draft.lastName) {
-      Alert.alert('Missing details', 'Please complete your profile first.');
-      router.replace('/(onboarding)/signup');
-      return;
-    }
-    if (draft.acceptedConsentIds.length === 0) {
-      // Got here via a legacy / stale draft path — make the user re-review
-      // the legal documents before any further register call.
+    if (!isExpired || resending) return;
+    if (!draft.pendingCustomerId) {
+      // No active pending registration — bounce to start.
       router.replace('/(onboarding)/signup');
       return;
     }
     setError(null);
-    register.rotateKey();
-    const body: RegisterRequest = {
-      firstName: draft.firstName,
-      lastName: draft.lastName,
-      email: draft.email ?? undefined,
-      phoneE164: draft.phoneE164 ?? undefined,
-      dateOfBirth: draft.dateOfBirth ?? undefined,
-      marketingOptIn: draft.marketingOptIn,
-      consentedDocumentIds: draft.acceptedConsentIds,
-      referralCode: draft.referralCode ?? undefined,
-    };
+    setResending(true);
     try {
-      await register.mutate(body);
-      // Reset deadline; the hook updates draft + resendDeadlineMs.
+      const result = await authApi.resendVerification(draft.pendingCustomerId);
+      logEvent('signup_otp_resent');
       dispatch({
         type: 'AUTH/UPDATE_DRAFT',
-        payload: { resendDeadlineMs: Date.now() + 45_000 },
+        payload: {
+          verificationTarget: result.verificationTarget,
+          otpExpiresAt: new Date(
+            Date.now() + result.expiresInSeconds * 1000,
+          ).toISOString(),
+          resendDeadlineMs: Date.now() + 45_000,
+        },
       });
       setOtp('');
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409 && err.code === 'CUSTOMER_ALREADY_REGISTERED') {
-          // Contact is already an active customer — resend via /auth/register
-          // can never succeed. Route into the login flow with the same identifier.
           Alert.alert(
             'Already registered',
             mapErrorCode(err.code) ?? err.message,
@@ -134,19 +121,26 @@ export default function SignupOtpScreen() {
           );
           return;
         }
-        if (err.status === 422 && err.code === 'VALIDATION_FAILED') {
-          // Most often the cached legal-documents set went stale.
-          Alert.alert(
-            'Please review your details',
-            mapErrorCode(err.code) ?? err.message,
-            [{ text: 'Review', onPress: () => router.replace('/(onboarding)/signup') }],
-          );
+        if (err.status === 404 && err.code === 'CUSTOMER_NOT_FOUND') {
+          // Pending customer was garbage-collected or wrong customerId —
+          // start over.
+          Alert.alert('Session expired', 'Please start the signup again.', [
+            {
+              text: 'OK',
+              onPress: () => {
+                dispatch({ type: 'AUTH/RESET_DRAFT' });
+                router.replace('/(onboarding)/signup');
+              },
+            },
+          ]);
           return;
         }
         setError(mapErrorCode(err.code) ?? err.message);
         return;
       }
       setError('Could not resend the code. Please try again.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -200,7 +194,7 @@ export default function SignupOtpScreen() {
             {isExpired ? (
               <TouchableOpacity onPress={handleResend} accessibilityHint="Sends a new code">
                 <Text style={[styles.resendLink, { color: colors.primary }]}>
-                  {register.loading ? 'Sending…' : 'Resend code'}
+                  {resending ? 'Sending…' : 'Resend code'}
                 </Text>
               </TouchableOpacity>
             ) : (

@@ -35,6 +35,14 @@ export const authApi = {
       .then((r) => r.data);
   },
 
+  resendVerification(customerId: string): Promise<RegistrationPendingResponse> {
+    return api
+      .post<RegistrationPendingResponse>('/auth/resend-verification', {
+        customerId,
+      })
+      .then((r) => r.data);
+  },
+
   sendCode(data: SendCodeRequest): Promise<SendCodeResponse> {
     return api
       .post<SendCodeResponse>('/auth/send-code', data)
