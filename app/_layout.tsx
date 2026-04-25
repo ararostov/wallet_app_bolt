@@ -1,9 +1,12 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Linking from 'expo-linking';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { WalletProvider } from '@/context/WalletContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { handleDeepLink } from '@/utils/deepLinks';
 import {
   useFonts,
   Inter_400Regular,
@@ -49,16 +52,30 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
+  useEffect(() => {
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url);
+    });
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <ThemeProvider>
-        <WalletProvider>
-          <AppContent />
-        </WalletProvider>
-      </ThemeProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={styles.root}>
+        <ThemeProvider>
+          <WalletProvider>
+            <AppContent />
+          </WalletProvider>
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

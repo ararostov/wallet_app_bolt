@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthEvents } from '../utils/authEvents';
 import type {
   User,
   WalletData,
@@ -332,6 +333,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const { initialized, ...toStore } = state;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toStore)).catch(() => {});
   }, [state]);
+
+  // Listen for forced-logout signals from the API interceptor (refresh failure).
+  useEffect(() => {
+    const unsubscribe = AuthEvents.on('logout', () => {
+      dispatch({ type: 'LOGOUT' });
+    });
+    return unsubscribe;
+  }, []);
 
   const completeOnboarding = useCallback((user: User) => {
     dispatch({ type: 'COMPLETE_ONBOARDING', payload: user });
