@@ -217,6 +217,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   DISPUTE_ATTACHMENT_TYPE_NOT_ALLOWED: 'Only JPEG, PNG, HEIC or PDF files are allowed.',
   SEARCH_QUERY_TOO_SHORT: 'Type at least 2 characters to search.',
 
+  // Help & Legal (10-help-legal)
+  FAQ_NOT_FOUND: 'This article is no longer available.',
+  STORE_NOT_FOUND: 'Store not found.',
+  SUPPORT_TICKET_VALIDATION_FAILED: 'Please review the fields and try again.',
+  SUPPORT_TICKET_RATE_LIMITED: 'Too many tickets submitted. Please try again later.',
+
   // Notifications (09-notifications)
   NOTIFICATION_NOT_FOUND: 'This notification is no longer available.',
   NOTIFICATION_CATEGORY_LOCKED: 'Security alerts cannot be disabled.',

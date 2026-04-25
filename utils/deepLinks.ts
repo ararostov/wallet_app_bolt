@@ -22,6 +22,9 @@ const ALLOWED_ACTION_ROUTE_PREFIXES = [
   '/profile',
   '/payment-methods',
   '/referral',
+  '/help',
+  '/legal',
+  '/stores',
   '/(tabs)',
 ];
 
@@ -125,6 +128,58 @@ export function handleDeepLink(url: string): void {
     }
     case 'notifications': {
       router.push('/notifications');
+      return;
+    }
+    case 'help': {
+      // walletapp://help                       → /help
+      // walletapp://help?category=payments     → /help?category=payments
+      // walletapp://help/faq/<id>              → /help/faq/<id>
+      // walletapp://help/contact               → /help/contact
+      // walletapp://help/ticket                → /help/ticket
+      const subroute = segments[1];
+      const stringQuery = Object.fromEntries(
+        Object.entries(queryParams).filter(
+          (entry): entry is [string, string] => typeof entry[1] === 'string',
+        ),
+      );
+      if (subroute === 'faq') {
+        const id = segments[2];
+        if (id) {
+          router.push({ pathname: '/help/faq/[id]', params: { id } });
+          return;
+        }
+      }
+      if (subroute === 'contact') {
+        router.push('/help/contact');
+        return;
+      }
+      if (subroute === 'ticket') {
+        router.push('/help/ticket');
+        return;
+      }
+      router.push({ pathname: '/help', params: stringQuery });
+      return;
+    }
+    case 'legal': {
+      // walletapp://legal              → /legal
+      // walletapp://legal/<id>         → /legal/<id>
+      const id = segments[1] ?? (typeof queryParams.id === 'string' ? queryParams.id : undefined);
+      if (id) {
+        router.push({ pathname: '/legal/[id]', params: { id } });
+      } else {
+        router.push('/legal');
+      }
+      return;
+    }
+    case 'stores': {
+      // walletapp://stores                → /stores
+      // walletapp://stores?city=London    → /stores?city=London
+      const stringQuery = Object.fromEntries(
+        Object.entries(queryParams).filter(
+          (entry): entry is [string, string] => typeof entry[1] === 'string',
+        ),
+      );
+      router.push({ pathname: '/stores', params: stringQuery });
       return;
     }
     case 'topup': {

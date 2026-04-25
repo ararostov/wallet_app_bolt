@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, Scale, ChevronRight, ChevronLeft, LogOut, Moon, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { User, Lock, FileText, Trash2, CreditCard, Shield, Wallet, Zap, Gift, Star, Sparkles, Users, Circle as HelpCircle, Phone, MapPin, Scale, ChevronRight, ChevronLeft, LogOut, Moon, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useWallet } from '@/context/WalletContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLogout } from '@/hooks/useLogout';
@@ -74,7 +74,8 @@ function buildSettingsGroups(hasPassword: boolean): SettingsGroup[] {
     title: 'Support',
     items: [
       { icon: HelpCircle, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Help & FAQ', route: '/help' },
-      { icon: Phone, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Contact us', route: '/help' },
+      { icon: Phone, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Contact us', route: '/help/contact' },
+      { icon: MapPin, iconColor: GREY, iconBg: GREY_BG, iconBgDark: GREY_BG_DARK, label: 'Store locator', route: '/stores' },
     ],
   },
   {
