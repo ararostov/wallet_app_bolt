@@ -1,9 +1,4 @@
-import type {
-  Transaction,
-  Reward,
-  Notification,
-  PaymentMethod,
-} from '../types';
+import type { Transaction, Reward, PaymentMethod } from '../types';
 
 const now = new Date();
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -206,86 +201,7 @@ export const MOCK_REWARDS: Reward[] = [
 
 // MOCK_PERKS removed \u2014 perks are now fetched from `GET /perks` (spec 07).
 
-export const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif_001',
-    title: 'Top-up confirmed',
-    body: 'Your \u00a350 top-up via Bank Transfer has been confirmed.',
-    type: 'transaction',
-    read: false,
-    date: toISO(yesterday, 13, 1),
-    actionLabel: 'View transaction',
-    actionRoute: '/transactions/tx_005',
-  },
-  {
-    id: 'notif_002',
-    title: 'Cashback earned',
-    body: 'You earned \u00a33.14 cashback from Tesco Extra.',
-    type: 'reward',
-    read: false,
-    date: toISO(today, 14, 21),
-    actionLabel: 'View rewards',
-    actionRoute: '/rewards',
-  },
-  {
-    id: 'notif_003',
-    title: 'Spending milestone progress',
-    body: "You're 65% of the way to earning your \u00a310 bonus. Keep spending!",
-    type: 'reward',
-    read: false,
-    date: toISO(yesterday, 18, 0),
-    actionLabel: 'View perks',
-    actionRoute: '/program',
-  },
-  {
-    id: 'notif_004',
-    title: 'Friend joined!',
-    body: 'Ben T. has joined and topped up. Your \u00a35 bonus is on its way.',
-    type: 'reward',
-    read: false,
-    date: '2026-04-10T12:00:00Z',
-    actionLabel: 'View referrals',
-    actionRoute: '/referral',
-  },
-  {
-    id: 'notif_005',
-    title: 'Card purchase',
-    body: 'You spent \u00a378.50 at Tesco Extra.',
-    type: 'transaction',
-    read: true,
-    date: toISO(today, 14, 21),
-    actionLabel: 'View transaction',
-    actionRoute: '/transactions/tx_001',
-  },
-  {
-    id: 'notif_006',
-    title: 'Security alert',
-    body: 'A new device signed into your account. Not you? Change your password.',
-    type: 'security',
-    read: true,
-    date: '2026-04-11T08:00:00Z',
-  },
-  {
-    id: 'notif_007',
-    title: 'Summer Promo coming soon',
-    body: 'Double cashback on travel is arriving in June. Stay tuned!',
-    type: 'promo',
-    read: true,
-    date: '2026-04-09T10:00:00Z',
-    actionLabel: 'View offers',
-    actionRoute: '/program',
-  },
-  {
-    id: 'notif_008',
-    title: 'Tier progress update',
-    body: "You're \u00a3175 away from reaching Platinum tier!",
-    type: 'tier',
-    read: true,
-    date: '2026-04-07T09:00:00Z',
-    actionLabel: 'View tier',
-    actionRoute: '/tier',
-  },
-];
+// MOCK_NOTIFICATIONS removed — inbox is now fetched from /notifications (spec 09).
 
 export const MOCK_PAYMENT_METHODS: PaymentMethod[] = [
   {

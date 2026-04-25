@@ -31,6 +31,9 @@ const config: ExpoConfig = {
         'We use the photo library so you can attach a screenshot when opening a dispute.',
       NSCameraUsageDescription:
         'We use the camera so you can take a photo when opening a dispute.',
+      // Allow silent / data-only push so the backend can future-proof
+      // background refreshes without a config change. spec 09 §7.6.
+      UIBackgroundModes: ['remote-notification'],
     },
   },
   android: {
@@ -53,6 +56,7 @@ const config: ExpoConfig = {
     'expo-font',
     'expo-web-browser',
     'expo-secure-store',
+    'expo-localization',
     [
       'expo-image-picker',
       {
@@ -60,6 +64,15 @@ const config: ExpoConfig = {
           'We use the photo library so you can attach a screenshot when opening a dispute.',
         cameraPermission:
           'We use the camera so you can take a photo when opening a dispute.',
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        // Accent colour for the notification tray on Android.
+        // Custom icon will be added when we have a dedicated asset; until
+        // then expo-notifications falls back to the app icon.
+        color: '#1a56db',
       },
     ],
   ],

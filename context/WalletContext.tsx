@@ -51,6 +51,10 @@ import type {
   ReferralFriend as ApiReferralFriend,
   ReferralSummary as ApiReferralSummary,
 } from '../types/referral';
+import type {
+  Notification as ApiNotification,
+  NotificationSettings as ApiNotificationSettings,
+} from '../types/notifications';
 
 // Re-export the canonical transaction record under its legacy alias so
 // existing call sites that imported ApiTransactionRecord from this module
@@ -60,7 +64,6 @@ export type { TransactionRecord as ApiTransactionRecord } from '../types/transac
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
-  MOCK_NOTIFICATIONS,
   MOCK_PAYMENT_METHODS,
 } from '../data/mockData';
 
@@ -166,6 +169,16 @@ interface WalletState {
   // since pagination is per-hook-instance, not a global piece of state.
   referralSummary: ApiReferralSummary | null;
   referralFriends: ApiReferralFriend[] | null;
+  // --- Notifications slice (spec 09-notifications) backend-shape --------
+  // `notificationsApi` is the materialised feed (page 1 + appended pages).
+  // `unreadNotificationsCountApi` mirrors GET /notifications/count and feeds
+  // the bell-icon badge on the Home tab. `notificationSettingsApi` holds
+  // the snapshot from GET /notifications/settings; the legacy mock-shape
+  // `notificationSettings` slice stays for back-compat with screens that
+  // haven't migrated yet.
+  notificationsApi: ApiNotification[] | null;
+  unreadNotificationsCountApi: number | null;
+  notificationSettingsApi: ApiNotificationSettings | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -247,6 +260,16 @@ type WalletAction =
   | { type: 'REFERRAL/APPEND_FRIENDS_API'; payload: ApiReferralFriend[] }
   | { type: 'REFERRAL/UPSERT_FRIEND_API'; payload: ApiReferralFriend }
   | { type: 'REFERRAL/CLEAR_API' }
+  // --- Notifications slice (spec 09-notifications) ---------------------
+  | { type: 'NOTIFICATIONS/SET_API'; payload: { items: ApiNotification[] } }
+  | { type: 'NOTIFICATIONS/APPEND_API'; payload: { items: ApiNotification[] } }
+  | { type: 'NOTIFICATIONS/UPSERT_API'; payload: ApiNotification }
+  | { type: 'NOTIFICATIONS/REMOVE_API'; payload: { id: string } }
+  | { type: 'NOTIFICATIONS/MARK_READ_API'; payload: { id: string; readAt: string } }
+  | { type: 'NOTIFICATIONS/MARK_ALL_READ_API'; payload: { readAt: string } }
+  | { type: 'NOTIFICATIONS/SET_UNREAD_COUNT_API'; payload: number }
+  | { type: 'NOTIFICATIONS/SET_SETTINGS_API'; payload: ApiNotificationSettings }
+  | { type: 'NOTIFICATIONS/CLEAR_API' }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -346,7 +369,7 @@ const defaultState: WalletState = {
   autoReload: initialAutoReload,
   referral: initialReferral,
   paymentMethods: MOCK_PAYMENT_METHODS,
-  notifications: MOCK_NOTIFICATIONS,
+  notifications: [],
   walletApi: null,
   cardApi: null,
   cardWalletProvisioning: { apple: 'idle', google: 'idle' },
@@ -361,6 +384,9 @@ const defaultState: WalletState = {
   perksApi: null,
   referralSummary: null,
   referralFriends: null,
+  notificationsApi: null,
+  unreadNotificationsCountApi: null,
+  notificationSettingsApi: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -836,6 +862,94 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
     case 'REFERRAL/CLEAR_API':
       return { ...state, referralSummary: null, referralFriends: null };
 
+    // --- Notifications slice (spec 09) ------------------------------------
+
+    case 'NOTIFICATIONS/SET_API':
+      return { ...state, notificationsApi: action.payload.items };
+
+    case 'NOTIFICATIONS/APPEND_API': {
+      const current = state.notificationsApi ?? [];
+      const known = new Set(current.map((n) => n.id));
+      const fresh = action.payload.items.filter((n) => !known.has(n.id));
+      return { ...state, notificationsApi: [...current, ...fresh] };
+    }
+
+    case 'NOTIFICATIONS/UPSERT_API': {
+      const incoming = action.payload;
+      const current = state.notificationsApi ?? [];
+      const idx = current.findIndex((n) => n.id === incoming.id);
+      const next =
+        idx >= 0
+          ? current.map((n, i) => (i === idx ? incoming : n))
+          : [incoming, ...current];
+      return { ...state, notificationsApi: next };
+    }
+
+    case 'NOTIFICATIONS/REMOVE_API': {
+      if (!state.notificationsApi) return state;
+      const target = state.notificationsApi.find((n) => n.id === action.payload.id);
+      const wasUnread = target ? target.readAt === null : false;
+      const nextCount =
+        wasUnread && state.unreadNotificationsCountApi !== null
+          ? Math.max(0, state.unreadNotificationsCountApi - 1)
+          : state.unreadNotificationsCountApi;
+      return {
+        ...state,
+        notificationsApi: state.notificationsApi.filter(
+          (n) => n.id !== action.payload.id,
+        ),
+        unreadNotificationsCountApi: nextCount,
+      };
+    }
+
+    case 'NOTIFICATIONS/MARK_READ_API': {
+      const list = state.notificationsApi;
+      if (!list) {
+        return state;
+      }
+      const target = list.find((n) => n.id === action.payload.id);
+      const wasUnread = target ? target.readAt === null : false;
+      const nextCount =
+        wasUnread && state.unreadNotificationsCountApi !== null
+          ? Math.max(0, state.unreadNotificationsCountApi - 1)
+          : state.unreadNotificationsCountApi;
+      return {
+        ...state,
+        notificationsApi: list.map((n) =>
+          n.id === action.payload.id && n.readAt === null
+            ? { ...n, readAt: action.payload.readAt }
+            : n,
+        ),
+        unreadNotificationsCountApi: nextCount,
+      };
+    }
+
+    case 'NOTIFICATIONS/MARK_ALL_READ_API': {
+      const list = state.notificationsApi;
+      const next = list
+        ? list.map((n) => (n.readAt === null ? { ...n, readAt: action.payload.readAt } : n))
+        : list;
+      return {
+        ...state,
+        notificationsApi: next,
+        unreadNotificationsCountApi: 0,
+      };
+    }
+
+    case 'NOTIFICATIONS/SET_UNREAD_COUNT_API':
+      return { ...state, unreadNotificationsCountApi: action.payload };
+
+    case 'NOTIFICATIONS/SET_SETTINGS_API':
+      return { ...state, notificationSettingsApi: action.payload };
+
+    case 'NOTIFICATIONS/CLEAR_API':
+      return {
+        ...state,
+        notificationsApi: null,
+        unreadNotificationsCountApi: null,
+        notificationSettingsApi: null,
+      };
+
     default:
       return state;
   }
@@ -997,7 +1111,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'AUTH/LOGOUT' });
   }, []);
 
-  const unreadNotificationsCount = state.notifications.filter((n) => !n.read).length;
+  // Prefer the backend-shape count when it has been hydrated by spec-09
+  // hooks (the bell-badge reads through this). Falls back to the legacy
+  // mock-shape derivation so screens that haven't migrated keep working.
+  const unreadNotificationsCount =
+    state.unreadNotificationsCountApi ??
+    state.notifications.filter((n) => !n.read).length;
 
   const availableRewards = state.rewards.filter((r) => r.status === 'available' || r.status === 'pending');
   const availableRewardsTotal = availableRewards.reduce((s, r) => s + r.amount, 0);

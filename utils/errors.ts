@@ -217,6 +217,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   DISPUTE_ATTACHMENT_TYPE_NOT_ALLOWED: 'Only JPEG, PNG, HEIC or PDF files are allowed.',
   SEARCH_QUERY_TOO_SHORT: 'Type at least 2 characters to search.',
 
+  // Notifications (09-notifications)
+  NOTIFICATION_NOT_FOUND: 'This notification is no longer available.',
+  NOTIFICATION_CATEGORY_LOCKED: 'Security alerts cannot be disabled.',
+  PUSH_TOKEN_INVALID: 'Could not register this device for notifications.',
+  PUSH_TOKEN_EXPIRED: 'Notifications are temporarily unavailable. Please try again.',
+  PUSH_TOKEN_NOT_FOUND: '',
+  PUSH_PROVIDER_UNAVAILABLE: 'Notifications are temporarily unavailable.',
+  NOTIFICATION_SETTINGS_VALIDATION_FAILED: 'Please check the settings and try again.',
+
   // Generic
   VALIDATION_FAILED: 'Please check the fields and try again.',
   IDEMPOTENCY_KEY_IN_PROGRESS: 'A similar request is still being processed.',
