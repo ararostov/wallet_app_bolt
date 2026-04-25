@@ -57,6 +57,7 @@ const config: ExpoConfig = {
     'expo-web-browser',
     'expo-secure-store',
     'expo-localization',
+    '@react-native-community/datetimepicker',
     [
       'expo-image-picker',
       {

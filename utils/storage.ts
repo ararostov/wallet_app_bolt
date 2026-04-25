@@ -23,6 +23,6 @@ export const Storage = {
   },
 
   async removeMany(keys: string[]): Promise<void> {
-    await AsyncStorage.removeMany(keys);
+    await AsyncStorage.multiRemove(keys);
   },
 };
