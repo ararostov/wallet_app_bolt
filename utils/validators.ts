@@ -46,6 +46,12 @@ export function isValidUkPostcode(value: string): boolean {
   return UK_POSTCODE_RE.test(value.trim());
 }
 
+// Card PIN — 4 to 6 numeric digits per backend regex `^\d{4,6}$`.
+export function isValidCardPin(value: string): boolean {
+  if (typeof value !== 'string') return false;
+  return /^\d{4,6}$/.test(value);
+}
+
 export function isStrongPassword(value: string): boolean {
   if (typeof value !== 'string') return false;
   if (value.length < 8) return false;

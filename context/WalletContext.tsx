@@ -30,6 +30,12 @@ import type {
   WalletStateData,
   WalletStateWallet,
 } from '../types/wallet';
+import type {
+  Card as ApiCard,
+  WalletProvisioningProvider,
+  WalletProvisioningStatus,
+} from '../types/card';
+import type { MoneyAmount } from '../types/auth';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -94,7 +100,16 @@ interface WalletState {
   // /auto-reload screen read from these; legacy screens still read from
   // the slices above. Both stay in sync via WALLET/HYDRATE_FROM_STATE.
   walletApi: WalletStateWallet | null;
-  cardApi: ApiCardSummary | null;
+  // `cardApi` is the new backend-shape card slice. The Card tab and limits
+  // screens always write the full `ApiCard` here; /wallet/state hydrates
+  // the slimmer `ApiCardSummary` projection on first load. Both share the
+  // common `id / status / brand / tokenizationStatus` surface that the
+  // Home tab reads — richer fields are only consumed by the Card tab.
+  cardApi: ApiCard | ApiCardSummary | null;
+  cardWalletProvisioning: {
+    apple: WalletProvisioningStatus;
+    google: WalletProvisioningStatus;
+  };
   tierApi: ApiTierSummary | null;
   autoReloadApi: AutoReloadSummary | null;
   consents: ProfileConsent[] | null;
@@ -133,6 +148,12 @@ type WalletAction =
   | { type: 'WALLET/HYDRATE_FROM_STATE'; payload: WalletStateData }
   | { type: 'WALLET/SET_BALANCE'; payload: { available: { amountMinor: number; currency: string }; pending: { amountMinor: number; currency: string }; status: WalletStateWallet['status'] } }
   | { type: 'WALLET/SET_AUTO_RELOAD'; payload: AutoReloadSummary | null }
+  // --- Card slice (spec 03-cards) backend-shape -----------------------------
+  | { type: 'CARD/SET_API'; payload: ApiCard | null }
+  | { type: 'CARD/UPDATE_API_STATUS'; payload: { lifecycleStatus: ApiCard['lifecycleStatus']; status: ApiCard['status']; frozenAt?: string | null } }
+  | { type: 'CARD/UPDATE_API_LIMITS'; payload: { dailyLimit: MoneyAmount | null; monthlyLimit: MoneyAmount | null; dailyLimitIsDefault: boolean; monthlyLimitIsDefault: boolean } }
+  | { type: 'CARD/CLEAR_API' }
+  | { type: 'CARD/SET_PROVISIONING_STATUS'; payload: { provider: WalletProvisioningProvider; status: WalletProvisioningStatus } }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -233,6 +254,7 @@ const defaultState: WalletState = {
   notifications: MOCK_NOTIFICATIONS,
   walletApi: null,
   cardApi: null,
+  cardWalletProvisioning: { apple: 'idle', google: 'idle' },
   tierApi: null,
   autoReloadApi: null,
   consents: null,
@@ -497,6 +519,63 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     case 'WALLET/SET_AUTO_RELOAD':
       return { ...state, autoReloadApi: action.payload };
+
+    // --- Card slice (spec 03-cards) ---------------------------------------
+
+    case 'CARD/SET_API':
+      return { ...state, cardApi: action.payload };
+
+    case 'CARD/UPDATE_API_STATUS': {
+      if (!state.cardApi) return state;
+      // Only the rich `ApiCard` shape carries `frozenAt`. When the slice
+      // currently holds the slimmer `CardSummary`, we keep the partial
+      // update at `status` / `lifecycleStatus` and rely on the next
+      // GET /card to fully hydrate `ApiCard`.
+      const next = {
+        ...state.cardApi,
+        status: action.payload.status,
+      } as typeof state.cardApi;
+      if (next && 'lifecycleStatus' in next) {
+        (next as ApiCard).lifecycleStatus = action.payload.lifecycleStatus;
+        if (action.payload.frozenAt !== undefined) {
+          (next as ApiCard).frozenAt = action.payload.frozenAt;
+        }
+      }
+      return { ...state, cardApi: next };
+    }
+
+    case 'CARD/UPDATE_API_LIMITS': {
+      if (!state.cardApi || !('lifecycleStatus' in state.cardApi)) return state;
+      const card = state.cardApi as ApiCard;
+      return {
+        ...state,
+        cardApi: {
+          ...card,
+          dailyLimit: action.payload.dailyLimit,
+          monthlyLimit: action.payload.monthlyLimit,
+          dailyLimitIsDefault: action.payload.dailyLimitIsDefault,
+          monthlyLimitIsDefault: action.payload.monthlyLimitIsDefault,
+        },
+      };
+    }
+
+    case 'CARD/CLEAR_API':
+      return {
+        ...state,
+        cardApi: null,
+        cardWalletProvisioning: { apple: 'idle', google: 'idle' },
+      };
+
+    case 'CARD/SET_PROVISIONING_STATUS': {
+      const key = action.payload.provider === 'apple_wallet' ? 'apple' : 'google';
+      return {
+        ...state,
+        cardWalletProvisioning: {
+          ...state.cardWalletProvisioning,
+          [key]: action.payload.status,
+        },
+      };
+    }
 
     default:
       return state;

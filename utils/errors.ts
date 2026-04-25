@@ -120,6 +120,9 @@ const ERROR_MESSAGES: Record<string, string> = {
     'Monthly cap must be at least the daily cap.',
 
   // Card
+  CARD_INVALID_PIN: 'Incorrect PIN. Please try again.',
+  CARD_PIN_LOCKED: 'Card was locked after too many PIN attempts. Contact support.',
+  CARD_LIMIT_CURRENCY_MISMATCH: 'Limit currency must match your wallet.',
   CARD_ALREADY_FROZEN: 'This card is already frozen.',
   CARD_NOT_FROZEN: 'This card is not frozen.',
   CARD_NOT_ACTIVE: 'This card is not active.',
