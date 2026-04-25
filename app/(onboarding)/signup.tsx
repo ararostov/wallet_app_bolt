@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 
 import { useTheme } from '@/context/ThemeContext';
@@ -34,9 +35,18 @@ import { useWallet } from '@/context/WalletContext';
 import { isValidE164, isValidEmail } from '@/utils/validators';
 import { useQuery } from '@/hooks/useQuery';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Badge } from '@/components/ui/Badge';
 import { legalApi } from '@/utils/api/legal';
-import type { LegalDocumentListItem } from '@/types/legal';
+import type { LegalDocumentListItem, LegalDocumentType } from '@/types/legal';
+
+// Friendly labels per type. Backend titles are merchant-prefixed
+// ("Tesco Clubcard Pay+ Privacy Policy") which is too verbose for a single-line
+// "I agree to the X" row — use the canonical type label instead.
+const TYPE_LABEL: Record<LegalDocumentType, string> = {
+  terms_of_service: 'Terms of Service',
+  privacy_policy: 'Privacy Policy',
+  cookie_policy: 'Cookie policy',
+  rewards_terms: 'Rewards terms',
+};
 
 const COUNTRIES = [
   { flag: '\u{1F1EC}\u{1F1E7}', code: '+44', name: 'GB' },
@@ -196,6 +206,15 @@ export default function SignupScreen() {
   };
 
   const openDocument = (doc: LegalDocumentListItem) => {
+    // Most merchant docs (incl. all Tesco ones) are hosted externally —
+    // contentMarkdown is null and url points at the canonical merchant page.
+    // Open it directly in the in-app browser so the user can read and come
+    // straight back to the form. Only fall back to the in-app viewer when
+    // the doc is markdown-only.
+    if (doc.url) {
+      WebBrowser.openBrowserAsync(doc.url).catch(() => undefined);
+      return;
+    }
     router.push({ pathname: '/legal/[id]', params: { id: doc.id } });
   };
 
@@ -373,14 +392,6 @@ export default function SignupScreen() {
           )}
 
           {/* --- Legal documents ----------------------------------------- */}
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Review and accept
-            </Text>
-            <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-              Please review and accept the following to continue.
-            </Text>
-          </View>
 
           {legalQuery.loading && !hasDocuments && (
             <View style={styles.loading}>
@@ -431,65 +442,68 @@ export default function SignupScreen() {
             </View>
           )}
 
-          {sortedDocuments.map((doc) => (
-            <Pressable
-              key={doc.id}
-              style={styles.consentRow}
-              onPress={() => toggleConsent(doc.id)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: !!accepted[doc.id] }}
-              accessibilityLabel={`${doc.title}, ${doc.required ? 'required' : 'optional'}`}
-            >
-              <View style={{ marginTop: 2 }}>
+          {sortedDocuments.map((doc) => {
+            const label = TYPE_LABEL[doc.type] ?? doc.title;
+            const optional = !doc.required;
+            return (
+              <Pressable
+                key={doc.id}
+                style={styles.consentRow}
+                onPress={() => toggleConsent(doc.id)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: !!accepted[doc.id] }}
+                accessibilityLabel={`I agree to the ${label}${optional ? ', optional' : ''}`}
+              >
                 <Checkbox
                   checked={!!accepted[doc.id]}
                   onToggle={() => toggleConsent(doc.id)}
-                  accessibilityLabel={doc.title}
+                  accessibilityLabel={label}
                 />
-              </View>
-              <View style={styles.consentContent}>
-                <View style={styles.consentLabelRow}>
-                  <Text style={[styles.consentLabel, { color: colors.text }]}>{doc.title}</Text>
-                  {doc.required && <Badge label="Required" variant="error" size="sm" />}
-                </View>
-                <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
-                  Version {doc.version}
+                <Text style={[styles.consentText, { color: colors.text }]}>
+                  I agree to the{' '}
+                  <Text
+                    style={[styles.consentLink, { color: colors.primary }]}
+                    onPress={() => openDocument(doc)}
+                  >
+                    {label}
+                  </Text>
+                  {optional && (
+                    <Text style={{ color: colors.textTertiary }}> (optional)</Text>
+                  )}
                 </Text>
-                <TouchableOpacity onPress={() => openDocument(doc)} accessibilityRole="link">
-                  <Text style={[styles.readLink, { color: colors.primary }]}>Read full text →</Text>
-                </TouchableOpacity>
-              </View>
-            </Pressable>
-          ))}
+              </Pressable>
+            );
+          })}
 
-          {/* --- Marketing toggle ---------------------------------------- */}
+          {/* --- Contact permission --------------------------------------- */}
           {hasDocuments && (
-            <Pressable
-              style={styles.consentRow}
-              onPress={() => setMarketingOptIn((v) => !v)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: marketingOptIn }}
-              accessibilityLabel="Marketing communications, optional"
-            >
-              <View style={{ marginTop: 2 }}>
+            <View style={styles.contactSection}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Contact permission
+              </Text>
+              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
+                We may use your contact details to send product updates,
+                personalised offers, and rewards news. You can change this
+                anytime in your profile.
+              </Text>
+              <Pressable
+                style={styles.consentRow}
+                onPress={() => setMarketingOptIn((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: marketingOptIn }}
+                accessibilityLabel="I agree to receive marketing communications, optional"
+              >
                 <Checkbox
                   checked={marketingOptIn}
                   onToggle={() => setMarketingOptIn((v) => !v)}
                   accessibilityLabel="Marketing communications"
                 />
-              </View>
-              <View style={styles.consentContent}>
-                <View style={styles.consentLabelRow}>
-                  <Text style={[styles.consentLabel, { color: colors.text }]}>
-                    Marketing communications
-                  </Text>
-                </View>
-                <Text style={[styles.consentDesc, { color: colors.textSecondary }]}>
-                  Receive product updates, personalised offers, and rewards news. You can change this
-                  later in your profile.
+                <Text style={[styles.consentText, { color: colors.text }]}>
+                  I agree to receive marketing communications
+                  <Text style={{ color: colors.textTertiary }}> (optional)</Text>
                 </Text>
-              </View>
-            </Pressable>
+              </Pressable>
+            </View>
           )}
 
           <TouchableOpacity
@@ -563,21 +577,23 @@ const styles = StyleSheet.create({
   referralToggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
   referralInput: { marginTop: 0 },
   errorText: { fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 4 },
-  sectionHeader: { marginTop: 24, marginBottom: 16 },
-  sectionTitle: { fontSize: 20, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
-  sectionHint: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 20 },
+  sectionTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
+  sectionHint: { fontSize: 14, fontFamily: 'Inter-Regular', lineHeight: 19, marginBottom: 12 },
   banner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16, gap: 6 },
   bannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   retryBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
   retryText: { fontSize: 15, fontFamily: 'Inter-SemiBold' },
-  loading: { paddingVertical: 24, alignItems: 'center', gap: 8 },
+  loading: { paddingVertical: 16, alignItems: 'center', gap: 8 },
   loadingText: { fontSize: 15, fontFamily: 'Inter-Regular' },
-  consentRow: { flexDirection: 'row', gap: 14, marginBottom: 20, alignItems: 'flex-start' },
-  consentContent: { flex: 1, gap: 4 },
-  consentLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  consentLabel: { fontSize: 17, fontFamily: 'Inter-SemiBold' },
-  consentDesc: { fontSize: 15, fontFamily: 'Inter-Regular', lineHeight: 18 },
-  readLink: { fontSize: 15, fontFamily: 'Inter-Medium', marginTop: 2 },
+  consentRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  consentText: { flex: 1, fontSize: 16, fontFamily: 'Inter-Regular', lineHeight: 22 },
+  consentLink: { fontFamily: 'Inter-Medium', textDecorationLine: 'underline' },
+  contactSection: { marginTop: 20 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
