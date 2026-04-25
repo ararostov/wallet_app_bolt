@@ -32,6 +32,7 @@ import {
 } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native';
 
 SplashScreen.preventAutoHideAsync();
@@ -183,15 +184,17 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={styles.root}>
-        <ThemeProvider>
-          <WalletProvider>
-            <BottomSheetProvider>
-              <ToastProvider>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <WalletProvider>
+              <BottomSheetProvider>
+                <ToastProvider>
                 <AppContent />
-              </ToastProvider>
-            </BottomSheetProvider>
-          </WalletProvider>
-        </ThemeProvider>
+                </ToastProvider>
+              </BottomSheetProvider>
+            </WalletProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

@@ -475,35 +475,25 @@ export default function SignupScreen() {
             );
           })}
 
-          {/* --- Contact permission --------------------------------------- */}
+          {/* --- Marketing as inline optional row -------------------------- */}
           {hasDocuments && (
-            <View style={styles.contactSection}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Contact permission
+            <Pressable
+              style={styles.consentRow}
+              onPress={() => setMarketingOptIn((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: marketingOptIn }}
+              accessibilityLabel="I agree to receive marketing communications, optional"
+            >
+              <Checkbox
+                checked={marketingOptIn}
+                onToggle={() => setMarketingOptIn((v) => !v)}
+                accessibilityLabel="Marketing communications"
+              />
+              <Text style={[styles.consentText, { color: colors.text }]}>
+                I agree to receive marketing communications
+                <Text style={{ color: colors.textTertiary }}> (optional)</Text>
               </Text>
-              <Text style={[styles.sectionHint, { color: colors.textSecondary }]}>
-                We may use your contact details to send product updates,
-                personalised offers, and rewards news. You can change this
-                anytime in your profile.
-              </Text>
-              <Pressable
-                style={styles.consentRow}
-                onPress={() => setMarketingOptIn((v) => !v)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: marketingOptIn }}
-                accessibilityLabel="I agree to receive marketing communications, optional"
-              >
-                <Checkbox
-                  checked={marketingOptIn}
-                  onToggle={() => setMarketingOptIn((v) => !v)}
-                  accessibilityLabel="Marketing communications"
-                />
-                <Text style={[styles.consentText, { color: colors.text }]}>
-                  I agree to receive marketing communications
-                  <Text style={{ color: colors.textTertiary }}> (optional)</Text>
-                </Text>
-              </Pressable>
-            </View>
+            </Pressable>
           )}
 
           <TouchableOpacity
@@ -527,7 +517,7 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, padding: 24, paddingBottom: 40 },
+  scroll: { flexGrow: 1, padding: 24, paddingBottom: 64 },
   backBtn: { marginBottom: 24 },
   backText: { fontSize: 18, fontFamily: 'Inter-Medium' },
   title: { fontSize: 30, fontFamily: 'Inter-Bold', marginBottom: 8, letterSpacing: -0.5 },
@@ -577,8 +567,6 @@ const styles = StyleSheet.create({
   referralToggleText: { fontSize: 16, fontFamily: 'Inter-Medium' },
   referralInput: { marginTop: 0 },
   errorText: { fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
-  sectionHint: { fontSize: 14, fontFamily: 'Inter-Regular', lineHeight: 19, marginBottom: 12 },
   banner: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 16, gap: 6 },
   bannerText: { fontSize: 15, fontFamily: 'Inter-Medium' },
   retryBtn: { alignSelf: 'flex-start', paddingVertical: 4 },
@@ -593,7 +581,6 @@ const styles = StyleSheet.create({
   },
   consentText: { flex: 1, fontSize: 16, fontFamily: 'Inter-Regular', lineHeight: 22 },
   consentLink: { fontFamily: 'Inter-Medium', textDecorationLine: 'underline' },
-  contactSection: { marginTop: 20 },
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },

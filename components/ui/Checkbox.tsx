@@ -35,7 +35,7 @@ export function Checkbox({
       style={({ pressed }) => [
         styles.box,
         {
-          borderColor: hasError ? colors.red : colors.border,
+          borderColor: hasError ? colors.red : colors.textTertiary,
           backgroundColor: 'transparent',
         },
         checked && {
