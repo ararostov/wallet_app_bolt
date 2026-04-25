@@ -87,7 +87,8 @@ export interface SignupDraft {
   registerIdempotencyKey: string | null;
 }
 
-const initialSignupDraft: SignupDraft = {
+// Exported for unit tests; treat as readonly outside the reducer.
+export const initialSignupDraft: SignupDraft = {
   method: null,
   email: null,
   phoneE164: null,
@@ -104,7 +105,7 @@ const initialSignupDraft: SignupDraft = {
   registerIdempotencyKey: null,
 };
 
-interface WalletState {
+export interface WalletState {
   initialized: boolean;
   onboardingComplete: boolean;
   user: User | null;
@@ -171,7 +172,7 @@ type AuthLoginPayload = {
   onboardingComplete: boolean;
 };
 
-type WalletAction =
+export type WalletAction =
   | { type: 'HYDRATE'; payload: Partial<WalletState> }
   | { type: 'SET_INITIALIZED' }
   | { type: 'COMPLETE_ONBOARDING'; payload: User }
@@ -243,7 +244,9 @@ type WalletAction =
   | { type: 'ACCOUNT/DELETION_SCHEDULED'; payload: AccountDeletionStatus }
   | { type: 'ACCOUNT/DELETION_CLEARED' };
 
-const defaultState: WalletState = {
+// Exported for unit tests so reducer test cases can build off the canonical
+// initial slice values without copy/paste.
+export const defaultState: WalletState = {
   initialized: false,
   onboardingComplete: false,
   user: null,
@@ -274,7 +277,7 @@ const defaultState: WalletState = {
   lastAuthError: null,
 };
 
-function walletReducer(state: WalletState, action: WalletAction): WalletState {
+export function walletReducer(state: WalletState, action: WalletAction): WalletState {
   switch (action.type) {
     case 'HYDRATE':
       return { ...state, ...action.payload };
