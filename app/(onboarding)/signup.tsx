@@ -271,12 +271,6 @@ export default function SignupScreen() {
           >
             <Text style={styles.primaryBtnText}>Continue</Text>
           </TouchableOpacity>
-
-          <Text style={[styles.legal, { color: colors.textTertiary }]}>
-            By continuing you agree to our{' '}
-            <Text style={[styles.legalLink, { color: colors.primary }]}>Terms</Text> and{' '}
-            <Text style={[styles.legalLink, { color: colors.primary }]}>Privacy Policy</Text>
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -339,6 +333,4 @@ const styles = StyleSheet.create({
   primaryBtn: { borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontSize: 18, fontFamily: 'Inter-SemiBold', color: '#fff' },
-  legal: { fontSize: 14, textAlign: 'center', lineHeight: 18, marginTop: 24 },
-  legalLink: {},
 });
