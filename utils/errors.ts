@@ -190,6 +190,21 @@ const ERROR_MESSAGES: Record<string, string> = {
   PERK_NOT_FOUND: 'This perk is no longer available.',
   STATEMENT_RANGE_TOO_WIDE: 'Please pick a shorter date range.',
 
+  // Referral (08-referral)
+  REFERRAL_DISABLED: 'The referral programme is not available at the moment.',
+  REFERRAL_INVALID_CHANNEL: 'Pick an email or phone to send the invite to.',
+  REFERRAL_CONTACT_INVALID: 'Please enter a valid email or phone number.',
+  REFERRAL_INVITE_DELIVERY_FAILED:
+    "We couldn't deliver the invite right now. Please try again.",
+  REFERRAL_FRIEND_NOT_FOUND: 'Friend not found.',
+  REFERRAL_SELF_REFERRAL: "You can't apply your own referral code.",
+  REFERRAL_ALREADY_APPLIED:
+    "You've already used a referral code on this account.",
+  REFERRAL_CROSS_MERCHANT:
+    'This referral code is for a different programme.',
+  REFERRAL_CODE_INVALID: 'This referral code is not valid.',
+  REFERRAL_CODE_EXPIRED: 'This referral code has expired.',
+
   // Transactions & disputes (06-transactions)
   TRANSACTION_NOT_FOUND: 'Transaction not found.',
   TRANSACTION_NOT_DISPUTABLE: "This transaction can't be disputed.",

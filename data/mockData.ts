@@ -1,7 +1,6 @@
 import type {
   Transaction,
   Reward,
-  Friend,
   Notification,
   PaymentMethod,
 } from '../types';
@@ -206,41 +205,6 @@ export const MOCK_REWARDS: Reward[] = [
 ];
 
 // MOCK_PERKS removed \u2014 perks are now fetched from `GET /perks` (spec 07).
-
-export const MOCK_FRIENDS: Friend[] = [
-  {
-    id: 'friend_001',
-    nameOrAlias: 'Alice M.',
-    avatarInitial: 'A',
-    stage: 'reward_posted',
-    sentAt: '2026-03-20T10:00:00Z',
-    joinedAt: '2026-03-22T15:30:00Z',
-    rewardAmount: 5,
-  },
-  {
-    id: 'friend_002',
-    nameOrAlias: 'Ben T.',
-    avatarInitial: 'B',
-    stage: 'topped_up',
-    sentAt: '2026-04-01T09:00:00Z',
-    joinedAt: '2026-04-03T11:00:00Z',
-  },
-  {
-    id: 'friend_003',
-    nameOrAlias: 'Clara H.',
-    avatarInitial: 'C',
-    stage: 'joined',
-    sentAt: '2026-04-08T14:00:00Z',
-    joinedAt: '2026-04-10T16:45:00Z',
-  },
-  {
-    id: 'friend_004',
-    nameOrAlias: 'David K.',
-    avatarInitial: 'D',
-    stage: 'invited',
-    sentAt: '2026-04-12T11:00:00Z',
-  },
-];
 
 export const MOCK_NOTIFICATIONS: Notification[] = [
   {

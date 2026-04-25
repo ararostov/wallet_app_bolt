@@ -171,8 +171,6 @@ export default function HomeScreen() {
     !showAutoReloadFailureBanner &&
     !dismissedBanners.includes('autoreload-upsell');
 
-  const showInviteBanner = !dismissedBanners.includes('invite');
-
   // --- Refresh handling ----------------------------------------------------
 
   const onRefresh = React.useCallback(() => {
@@ -508,30 +506,6 @@ export default function HomeScreen() {
             })
           )}
         </View>
-
-        {showInviteBanner && (
-          <View style={[styles.banner, { backgroundColor: isDark ? '#1E3A5F' : '#eff6ff' }]}>
-            <View style={styles.bannerContent}>
-              <Users size={20} color={colors.primary} />
-              <View style={styles.bannerText}>
-                <Text style={[styles.bannerTitle, { color: colors.text }]}>
-                  Invite friends, earn £5 each
-                </Text>
-                <Text style={[styles.bannerSub, { color: colors.textSecondary }]}>
-                  Share your code and both get rewarded
-                </Text>
-              </View>
-            </View>
-            <View style={styles.bannerActions}>
-              <TouchableOpacity onPress={() => router.push('/referral')}>
-                <Text style={[styles.bannerCTA, { color: colors.primary }]}>Invite</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => dismissBanner('invite')}>
-                <X size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
 
         {showAutoReloadUpsell && (
           <View style={[styles.banner, { backgroundColor: isDark ? '#78350F' : '#fffbeb' }]}>

@@ -47,6 +47,10 @@ import type {
   RewardsSummary,
   Tier as ApiTier,
 } from '../types/loyalty';
+import type {
+  ReferralFriend as ApiReferralFriend,
+  ReferralSummary as ApiReferralSummary,
+} from '../types/referral';
 
 // Re-export the canonical transaction record under its legacy alias so
 // existing call sites that imported ApiTransactionRecord from this module
@@ -56,7 +60,6 @@ export type { TransactionRecord as ApiTransactionRecord } from '../types/transac
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
-  MOCK_FRIENDS,
   MOCK_NOTIFICATIONS,
   MOCK_PAYMENT_METHODS,
 } from '../data/mockData';
@@ -156,6 +159,13 @@ interface WalletState {
   rewardsSummary: RewardsSummary | null;
   tierApiFull: ApiTier | null;
   perksApi: ApiPerk[] | null;
+  // --- Referral slice (spec 08-referral) backend-shape ------------------
+  // `referralSummary` is the snapshot from `GET /referral` (code, totals,
+  // monthly cap, programme rules). `referralFriends` is the materialised
+  // page-1+ friends feed; cursor lives inside the hook (`useReferralFriends`)
+  // since pagination is per-hook-instance, not a global piece of state.
+  referralSummary: ApiReferralSummary | null;
+  referralFriends: ApiReferralFriend[] | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -225,6 +235,18 @@ type WalletAction =
   | { type: 'REWARDS/CLEAR_API' }
   | { type: 'TIER/SET_API'; payload: ApiTier }
   | { type: 'PERKS/SET_API'; payload: ApiPerk[] }
+  // --- Referral slices (spec 08-referral) -------------------------------
+  // SET_SUMMARY replaces the cached snapshot from GET /referral.
+  // SET_FRIENDS_API replaces the materialised friends feed (page 1).
+  // APPEND_FRIENDS_API extends the feed with a paged result (de-duped by id).
+  // UPSERT_FRIEND_API replaces or prepends a single row — used by
+  // useSendInvite for optimistic updates and by spec-09 push handlers
+  // (FriendJoined, ReferralRewardPosted) once they land.
+  | { type: 'REFERRAL/SET_SUMMARY'; payload: ApiReferralSummary }
+  | { type: 'REFERRAL/SET_FRIENDS_API'; payload: ApiReferralFriend[] }
+  | { type: 'REFERRAL/APPEND_FRIENDS_API'; payload: ApiReferralFriend[] }
+  | { type: 'REFERRAL/UPSERT_FRIEND_API'; payload: ApiReferralFriend }
+  | { type: 'REFERRAL/CLEAR_API' }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -290,14 +312,14 @@ const initialAutoReload: AutoReload = {
 };
 
 const initialReferral: ReferralProgram = {
-  code: 'ALEX5XK9',
-  link: 'https://wallet.app/join?ref=ALEX5XK9',
-  invited: 4,
-  joined: 3,
-  earned: 10,
-  monthlyRewardedCap: 50,
-  monthlyRewardedUsed: 10,
-  friends: MOCK_FRIENDS,
+  code: '',
+  link: '',
+  invited: 0,
+  joined: 0,
+  earned: 0,
+  monthlyRewardedCap: 0,
+  monthlyRewardedUsed: 0,
+  friends: [],
 };
 
 const initialNotificationSettings: NotificationSettings = {
@@ -337,6 +359,8 @@ const defaultState: WalletState = {
   rewardsSummary: null,
   tierApiFull: null,
   perksApi: null,
+  referralSummary: null,
+  referralFriends: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -782,6 +806,35 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
 
     case 'PERKS/SET_API':
       return { ...state, perksApi: action.payload };
+
+    // --- Referral slices (spec 08) ----------------------------------------
+
+    case 'REFERRAL/SET_SUMMARY':
+      return { ...state, referralSummary: action.payload };
+
+    case 'REFERRAL/SET_FRIENDS_API':
+      return { ...state, referralFriends: action.payload };
+
+    case 'REFERRAL/APPEND_FRIENDS_API': {
+      const current = state.referralFriends ?? [];
+      const known = new Set(current.map((f) => f.id));
+      const fresh = action.payload.filter((f) => !known.has(f.id));
+      return { ...state, referralFriends: [...current, ...fresh] };
+    }
+
+    case 'REFERRAL/UPSERT_FRIEND_API': {
+      const incoming = action.payload;
+      const current = state.referralFriends ?? [];
+      const idx = current.findIndex((f) => f.id === incoming.id);
+      const next =
+        idx >= 0
+          ? current.map((f, i) => (i === idx ? incoming : f))
+          : [incoming, ...current];
+      return { ...state, referralFriends: next };
+    }
+
+    case 'REFERRAL/CLEAR_API':
+      return { ...state, referralSummary: null, referralFriends: null };
 
     default:
       return state;

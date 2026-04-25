@@ -55,6 +55,17 @@ export function handleDeepLink(url: string): void {
       return;
     }
     case 'referral': {
+      // `walletapp://referral?code=ABC` — same semantics as `invite`:
+      // forward a candidate code to the auth slice (which decides whether
+      // to stash it in the signup draft or in `pendingReferralCode`) and
+      // then route. Logged-in users land on /referral; logged-out users
+      // pick up the code from the signup draft when they reach
+      // /(onboarding)/intro.
+      const codeRaw = queryParams.code;
+      const code = typeof codeRaw === 'string' ? codeRaw.toUpperCase() : null;
+      if (code && REFERRAL_RE.test(code)) {
+        referralListener?.(code);
+      }
       router.push({
         pathname: '/referral',
         params: Object.fromEntries(
