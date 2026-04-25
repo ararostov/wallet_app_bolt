@@ -53,8 +53,41 @@ export default function AutoReloadScreen() {
   const { colors, isDark } = useTheme();
   const { state } = useWallet();
 
-  const { walletApi, autoReloadApi, paymentMethods } = state;
+  const { walletApi, autoReloadApi, paymentMethods, paymentMethodsApi } = state;
   const currency = walletApi?.currency ?? 'GBP';
+
+  // Prefer the backend-shape payment-methods slice once it has been hydrated
+  // by the dedicated list screen (spec 04). Fallback to the legacy mock slice
+  // so the picker keeps working before the user visits payment-methods.
+  type PickerOption = {
+    id: string;
+    label: string;
+    last4: string | null;
+    isDefault: boolean;
+  };
+  const pickerOptions: PickerOption[] = useMemo(() => {
+    if (paymentMethodsApi) {
+      return paymentMethodsApi
+        .filter((pm) => pm.status === 'active')
+        .map((pm) => {
+          const brand =
+            pm.brand?.charAt(0).toUpperCase() + (pm.brand?.slice(1) ?? '');
+          const label = pm.bankName ?? brand ?? 'Card';
+          return {
+            id: pm.id,
+            label,
+            last4: pm.panLast4,
+            isDefault: pm.isDefault,
+          };
+        });
+    }
+    return paymentMethods.map((pm) => ({
+      id: pm.id,
+      label: pm.label,
+      last4: pm.last4 ?? null,
+      isDefault: pm.isDefault,
+    }));
+  }, [paymentMethodsApi, paymentMethods]);
 
   // --- Local form state (initialised from cached autoReload, or defaults). -
 
@@ -69,7 +102,9 @@ export default function AutoReloadScreen() {
   );
   const [paymentMethodId, setPaymentMethodId] = useState<string | null>(
     autoReloadApi?.paymentMethod?.id ??
-      // Fall back to whatever default the (legacy) PM list says is default.
+      // Prefer the API slice's default if it has been hydrated; fall back to
+      // the legacy mock-shape default flag.
+      paymentMethodsApi?.find((pm) => pm.isDefault)?.id ??
       paymentMethods.find((pm) => pm.isDefault)?.id ??
       null,
   );
@@ -158,8 +193,8 @@ export default function AutoReloadScreen() {
   // --- Validation ---------------------------------------------------------
 
   const selectedPaymentMethod = useMemo(
-    () => paymentMethods.find((pm) => pm.id === paymentMethodId) ?? null,
-    [paymentMethods, paymentMethodId],
+    () => pickerOptions.find((pm) => pm.id === paymentMethodId) ?? null,
+    [pickerOptions, paymentMethodId],
   );
 
   const canSubmit = useMemo(() => {
@@ -509,7 +544,7 @@ export default function AutoReloadScreen() {
         <View style={styles.sheetBackdrop}>
           <View style={[styles.sheetCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.sheetTitle, { color: colors.text }]}>Payment source</Text>
-            {paymentMethods.length === 0 ? (
+            {pickerOptions.length === 0 ? (
               <View style={{ paddingVertical: 16 }}>
                 <Text style={[styles.sourceLabel, { color: colors.textSecondary }]}>
                   No payment methods on file. Add one first.
@@ -525,7 +560,7 @@ export default function AutoReloadScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              paymentMethods.map((pm) => (
+              pickerOptions.map((pm) => (
                 <TouchableOpacity
                   key={pm.id}
                   style={[styles.sheetRow, { borderBottomColor: colors.borderLight }]}

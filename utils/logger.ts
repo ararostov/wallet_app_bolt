@@ -17,6 +17,10 @@ const SENSITIVE_KEYS = new Set<string>([
   'cardNumber',
   'cvv',
   'cvc',
+  'securityCode',
+  'pspToken',
+  'pspSessionId',
+  'trueLayerAccountId',
   'authorization',
 ]);
 

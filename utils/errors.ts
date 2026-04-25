@@ -151,6 +151,17 @@ const ERROR_MESSAGES: Record<string, string> = {
   PAYMENT_METHOD_BRAND_UNSUPPORTED: 'This card brand is not supported.',
   PAYMENT_METHOD_ATTACHED_TO_AUTO_RELOAD:
     'Remove this card from auto-reload before deleting it.',
+  PAYMENT_METHOD_ALREADY_ARCHIVED: 'This payment method has already been removed.',
+  PAYMENT_METHOD_NOT_ACTIVE:
+    "This method isn't active. Please add a new one.",
+  PAYMENT_METHOD_TYPE_UNSUPPORTED:
+    "This payment method isn't available right now.",
+  PAYMENT_METHOD_OWNERSHIP_MISMATCH:
+    'Something went wrong. Please re-open the app.',
+  PAYMENT_METHOD_PROVIDER_UNAVAILABLE:
+    'Payment provider is temporarily unavailable. Please try again.',
+  PSP_SESSION_EXPIRED: 'The payment session expired. Please try again.',
+  PSP_SESSION_INVALID: 'The payment session is invalid. Please try again.',
   PLAIN_PAN_FORBIDDEN: 'Card details cannot be entered directly. Use a secure provider.',
 
   // Generic

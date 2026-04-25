@@ -36,6 +36,7 @@ import type {
   WalletProvisioningStatus,
 } from '../types/card';
 import type { MoneyAmount } from '../types/auth';
+import type { PaymentMethod as ApiPaymentMethod } from '../types/paymentMethods';
 import {
   MOCK_TRANSACTIONS,
   MOCK_REWARDS,
@@ -112,6 +113,14 @@ interface WalletState {
   };
   tierApi: ApiTierSummary | null;
   autoReloadApi: AutoReloadSummary | null;
+  // Backend-shape payment-methods slice (spec 04). Hydrated by
+  // /payment-methods on the list screen and on every successful add /
+  // archive / set-default mutation. Stays `null` until the user opens the
+  // list screen for the first time. The legacy `paymentMethods` mock slice
+  // above stays for screens that haven't migrated yet (auto-reload picker
+  // currently mock-shaped); reducer keeps both in sync only via dedicated
+  // PAYMENT_METHODS/* actions, never automatically.
+  paymentMethodsApi: ApiPaymentMethod[] | null;
   consents: ProfileConsent[] | null;
   marketingOptIn: boolean;
   contactChangeInProgress: ContactChangeInProgress | null;
@@ -154,6 +163,11 @@ type WalletAction =
   | { type: 'CARD/UPDATE_API_LIMITS'; payload: { dailyLimit: MoneyAmount | null; monthlyLimit: MoneyAmount | null; dailyLimitIsDefault: boolean; monthlyLimitIsDefault: boolean } }
   | { type: 'CARD/CLEAR_API' }
   | { type: 'CARD/SET_PROVISIONING_STATUS'; payload: { provider: WalletProvisioningProvider; status: WalletProvisioningStatus } }
+  // --- Payment methods slice (spec 04-payment-methods) backend-shape -----
+  | { type: 'PAYMENT_METHODS/SET_API'; payload: ApiPaymentMethod[] }
+  | { type: 'PAYMENT_METHODS/UPSERT_API'; payload: ApiPaymentMethod }
+  | { type: 'PAYMENT_METHODS/REMOVE_API'; payload: { id: string } }
+  | { type: 'PAYMENT_METHODS/SET_DEFAULT_API'; payload: { id: string } }
   | { type: 'MARK_NOTIFICATION_READ'; payload: string }
   | { type: 'MARK_ALL_NOTIFICATIONS_READ' }
   | { type: 'DELETE_NOTIFICATION'; payload: string }
@@ -257,6 +271,7 @@ const defaultState: WalletState = {
   cardWalletProvisioning: { apple: 'idle', google: 'idle' },
   tierApi: null,
   autoReloadApi: null,
+  paymentMethodsApi: null,
   consents: null,
   marketingOptIn: false,
   contactChangeInProgress: null,
@@ -574,6 +589,49 @@ function walletReducer(state: WalletState, action: WalletAction): WalletState {
           ...state.cardWalletProvisioning,
           [key]: action.payload.status,
         },
+      };
+    }
+
+    // --- Payment methods slice (spec 04) ----------------------------------
+
+    case 'PAYMENT_METHODS/SET_API':
+      return { ...state, paymentMethodsApi: action.payload };
+
+    case 'PAYMENT_METHODS/UPSERT_API': {
+      const incoming = action.payload;
+      const current = state.paymentMethodsApi ?? [];
+      // If the incoming row claims default, strip the flag from any other
+      // active row before merging so at most one default is held locally.
+      const cleared = incoming.isDefault
+        ? current.map((p) => (p.id === incoming.id ? p : { ...p, isDefault: false }))
+        : current;
+      const idx = cleared.findIndex((p) => p.id === incoming.id);
+      const next =
+        idx >= 0
+          ? cleared.map((p, i) => (i === idx ? incoming : p))
+          : [incoming, ...cleared];
+      return { ...state, paymentMethodsApi: next };
+    }
+
+    case 'PAYMENT_METHODS/REMOVE_API': {
+      if (!state.paymentMethodsApi) return state;
+      return {
+        ...state,
+        paymentMethodsApi: state.paymentMethodsApi.filter(
+          (p) => p.id !== action.payload.id,
+        ),
+      };
+    }
+
+    case 'PAYMENT_METHODS/SET_DEFAULT_API': {
+      if (!state.paymentMethodsApi) return state;
+      const id = action.payload.id;
+      return {
+        ...state,
+        paymentMethodsApi: state.paymentMethodsApi.map((p) => ({
+          ...p,
+          isDefault: p.id === id,
+        })),
       };
     }
 
